@@ -1,0 +1,16 @@
+
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - conda-forge::r-base>=4.0.0
+  - conda-forge::r-devtools
+  - conda-forge::r-foreach
+  - conda-forge::r-doparallel
+  - conda-forge::r-seqinr
+  - conda-forge::r-mgcv
+  - conda-forge::r-data.table
+  - bioconda::bioconductor-rsamtools
+  - bioconda::bioconductor-genomicranges
+  - bioconda::bioconductor-iranges

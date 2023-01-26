@@ -1,0 +1,11 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - conda-forge::r-base>=4.0.0
+  - conda-forge::r-data.table
+  - conda-forge::r-stringr
+  - conda-forge::r-seqinr
+  - conda-forge::r-ggvenndiagram
+  - conda-forge::r-ggplot2
+  - conda-forge::r-rcolorbrewer
