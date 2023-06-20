@@ -28,7 +28,7 @@ command = "SURVIVOR merge " + str(snakemake.params.sample_files) + \
         " " + str(snakemake.params.estimate_sv_distance) +\
         " " + str(snakemake.params.min_length) +\
         " " + snakemake.output.vcf +\
-        " 2>> " + log_filename
+        " >> " + log_filename + " 2>&1"
 
 
 f = open(log_filename, 'at')

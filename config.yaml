@@ -7,7 +7,9 @@ reads_trimming: false
 cnproscan_GC_normalization: TRUE
 cnproscan_MAPPABILITY_normalization: TRUE
 cnproscan_ORIC_normalization: TRUE
-cnproscan_ORIC_POSITION: 
+cnproscan_ORIC_POSITION: 1
+procaryaSV_distanceThreshold: 2000
+procaryaSV_minCallers: 1
 samples:
     - S01
     - S02

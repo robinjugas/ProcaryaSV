@@ -10,7 +10,8 @@ rule procaryaSV_callers_merge:
     params:
         min_sv_length=10,
         max_sv_length="NA",
-        mergeCloseEventsDistanceThreshold=100,
+        minCallers=config["procaryaSV_minCallers"],
+        distanceThreshold=config["procaryaSV_distanceThreshold"],
     log:
         "logs/procaryaSV_callers_merge/{SAMPLE}.log",
     threads: 6
@@ -18,24 +19,24 @@ rule procaryaSV_callers_merge:
         os.path.join(workflow.basedir,"envs/procaryaSV.yaml")
     script: os.path.join(workflow.basedir,"wrappers/procaryaSV_callers_merge/script.py")
 
-# procaryaSV SAMPLES MERGE
-rule procaryaSV_samples_merge:
-    input:
-        merged_tsvs=expand("results/merged_procaryaSV/{SAMPLE}.procaryaSV_callers_merge.tsv",SAMPLE=config["samples"]),
-        reference=os.path.join("results/references",config["genome_fasta"])
-    output:
-        tsv="results/merged_procaryaSV/{SAMPLE}.procaryaSV_samples_merge.tsv",
-        heatmap_png="results/merged_procaryaSV/{SAMPLE}.procaryaSV_heatmap.png",
-    params:
-        min_overlap=10,
-        max_sv_length="NA",
-        mergeCloseEventsDistanceThreshold=100,
-    log:
-        "logs/procaryaSV_samples_merge/{SAMPLE}.log",
-    threads: 6
-    conda:
-        os.path.join(workflow.basedir,"envs/procaryaSV.yaml")
-    script: os.path.join(workflow.basedir,"wrappers/procaryaSV_samples_merge/script.py")
+# # procaryaSV SAMPLES MERGE
+# rule procaryaSV_samples_merge:
+#     input:
+#         merged_tsvs=expand("results/merged_procaryaSV/{SAMPLE}.procaryaSV_callers_merge.tsv",SAMPLE=config["samples"]),
+#         reference=os.path.join("results/references",config["genome_fasta"])
+#     output:
+#         tsv="results/merged_procaryaSV/{SAMPLE}.procaryaSV_samples_merge.tsv",
+#         heatmap_png="results/merged_procaryaSV/{SAMPLE}.procaryaSV_heatmap.png",
+#     params:
+#         min_overlap=10,
+#         max_sv_length="NA",
+#         mergeCloseEventsDistanceThreshold=100,
+#     log:
+#         "logs/procaryaSV_samples_merge/{SAMPLE}.log",
+#     threads: 6
+#     conda:
+#         os.path.join(workflow.basedir,"envs/procaryaSV.yaml")
+#     script: os.path.join(workflow.basedir,"wrappers/procaryaSV_samples_merge/script.py")
 
 
 # SURVIVOR MERGE

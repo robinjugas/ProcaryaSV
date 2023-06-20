@@ -1,5 +1,6 @@
 channels:
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - conda-forge::r-base>=4.0.0
@@ -9,3 +10,4 @@ dependencies:
   - conda-forge::r-ggvenndiagram
   - conda-forge::r-ggplot2
   - conda-forge::r-rcolorbrewer
+  - bioconda::bioconductor-iranges

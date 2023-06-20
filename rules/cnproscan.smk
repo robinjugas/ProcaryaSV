@@ -27,8 +27,8 @@ rule genmap:
         os.path.join(workflow.basedir, "envs/genmap.yaml")
     shell:
         """
-        genmap index -F {input} -I {output.mapp_index}  2>{log}
-        genmap map -K 30 -E 2 -I {output.mapp_index} -O {output.mapp_genmap} -t -w -bg  2>>{log}
+        genmap index -F {input} -I {output.mapp_index}  >> {log} 2>&1
+        genmap map -K 30 -E 2 -I {output.mapp_index} -O {output.mapp_genmap} -t -w -bg  >> {log} 2>&1
         """
 
 

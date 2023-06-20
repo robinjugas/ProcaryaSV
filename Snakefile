@@ -22,7 +22,7 @@ include: "rules/delly.smk"
 include: "rules/cnvnator.smk"
 include: "rules/cnproscan.smk"
 include: "rules/merge_callers.smk"
-
+include: "rules/breseq.smk"
 ####################################
 # RULE ALL
 rule all:
@@ -33,6 +33,7 @@ rule all:
         vcf_cnvnator=expand("results/cnvnator/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
         vcf_cnproscan=expand("results/cnproscan/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
         vcf_pindel=expand("results/pindel/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        # vcf_breseq=expand("results/breseq/{SAMPLE}/output/output.vcf",SAMPLE = config["samples"]),
         # merged SVs
         merge_tsv=expand("results/merged_procaryaSV/{SAMPLE}.procaryaSV_callers_merge.tsv",SAMPLE = config["samples"]),
         vcf_surv=expand("results/merged_survivor/{SAMPLE}.survivor_merged.vcf",SAMPLE = config["samples"]),

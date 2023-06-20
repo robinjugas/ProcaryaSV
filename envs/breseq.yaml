@@ -1,0 +1,8 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - breseq==0.37.1
+  - bowtie2>=2.1.0
+  - r-base

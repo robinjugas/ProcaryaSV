@@ -26,7 +26,7 @@ rule bwa_mem2_index:
         os.path.join(workflow.basedir,"envs/bwa.yaml")
     shell:
         """
-        bwa-mem2 index -p {params.prefix} {input} {log}
+        bwa-mem2 index -p {params.prefix} {input} >> {log} 2>&1
         """
 
 # BWA INPUT FUNCTION RAW/TRIMMED READS
