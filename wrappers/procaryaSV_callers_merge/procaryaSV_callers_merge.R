@@ -655,7 +655,7 @@ run_all <- function(args){
       INSERTIONS_DF$SVTYPE <- "INS"
       
       # threshold callersSupport
-      INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupport,]
+      # INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupport,]
       
       if(nrow(INSERTIONS_DF)>0){
         #B find overlapping events
@@ -804,7 +804,7 @@ run_all <- function(args){
       INVERSIONS_DF$SVTYPE <- "INV"
       
       # threshold callersSupport
-      INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupport,]
+      # INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupport,]
       
       if(nrow(INVERSIONS_DF)>0){
         #B find overlapping events
