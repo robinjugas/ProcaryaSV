@@ -18,10 +18,11 @@ command = "Rscript " + os.path.abspath(os.path.dirname(__file__))+"/procaryaSV_c
     snakemake.output.venn_png + " " + \
     snakemake.output.barchart_png + " " + \
     snakemake.input.reference + " " + \
+    snakemake.params.sample_name + " " + \
     str(snakemake.params.min_sv_length) + " " + \
     str(snakemake.params.max_sv_length) + " " + \
     str(snakemake.params.minCallers) + " " + \
-    str(snakemake.params.distanceThreshold) + " " + \
+    str(snakemake.params.maxGap) + " " + \
     " ".join(snakemake.input.vcfs) +\
     " >> " + log_filename + " 2>&1"
 

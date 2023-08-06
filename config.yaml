@@ -1,15 +1,24 @@
-reference_folder: /home/rj/1TB/ProcaryaSV_K.pneumoniae/
-genome_fasta: KP_ref.fasta
+reference_folder: /example/fastas/
+genome_fasta: example.fasta
 paired_reads_tags: ["_R1", "_R2"]
 reads_extension: ".fastq"
 callers : ["lumpy","delly2","cnvnator","pindel","cnproscan"]
 reads_trimming: false
+
 cnproscan_GC_normalization: TRUE
 cnproscan_MAPPABILITY_normalization: TRUE
 cnproscan_ORIC_normalization: TRUE
 cnproscan_ORIC_POSITION: 1
-procaryaSV_distanceThreshold: 2000
+
 procaryaSV_minCallers: 1
+procaryaSV_min_sv_length: 1
+procaryaSV_max_sv_length: NA
+procaryaSV_maxGap: 2000
+
+survivor_minCallers: 1
+survivor_min_sv_length: 1
+survivor_max_allowed_space: 1000
+
 samples:
     - S01
     - S02
@@ -22,40 +31,3 @@ samples:
     - S09
     - S10
     - S11
-    - S12
-    - S13
-    - S14
-    - S15
-    - S16
-    - S17
-    - S18
-    - S19
-    - S20
-    - S21
-    - S22
-    - S23
-    - S24
-    - S25
-    - S26
-    - S27
-    - S28
-    - S29
-    - S30
-    - S31
-    - S32
-    - S33
-    - S34
-    - S35
-    - S36
-    - S37
-    - S38
-    - S39
-    - S40
-    - S41
-    - S42
-    - S43
-    - S44
-    - S45
-    - S46
-    - S47
-    - S48

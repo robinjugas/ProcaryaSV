@@ -46,7 +46,7 @@ rule cnproscan:
         MAPPABILITYnormalization=config["cnproscan_MAPPABILITY_normalization"],
         ORICnormalization=config["cnproscan_ORIC_normalization"],
         ORIC_position=config["cnproscan_ORIC_POSITION"]
-    threads: 2
+    threads: 4
     conda:
         os.path.join(workflow.basedir, "envs/cnproscan.yaml")  # add python to ENV
     log:

@@ -13,15 +13,15 @@ run_all <- function(args){
   venn_png <- args[2]
   barchart_png <- args[3]
   fastaFile <- args[4] 
-  sample_name <- args[5] 
-  min_sv_length <- as.integer(args[6]) #default 1 
-  max_sv_length <- as.integer(args[7]) #default refLength/3
-  callersSupport <- as.integer(args[8]) 
-  distanceThreshold <- as.integer(args[9]) 
-  vcf_files <- args[10:length(args)]
+  min_sv_length <- as.integer(args[5]) #default 1 
+  max_sv_length <- as.integer(args[6]) #default refLength/3
+  callersSupport <- as.integer(args[7]) 
+  distanceThreshold <- as.integer(args[8]) 
+  vcf_files <- args[9:length(args)]
   
   ## DEFAULT VALUES
   numCallers <- length(vcf_files)
+  distanceThreshold <- 2000 #default
   if(is.na(distanceThreshold)){distanceThreshold <- 2000} #default
   if(is.na(min_sv_length)){min_sv_length <- 50} #default
   if(is.na(callersSupport)){callersSupport <- 0} #default
@@ -321,107 +321,106 @@ run_all <- function(args){
       # threshold callersSupport
       DELETIONS_DF <- DELETIONS_DF[DELETIONS_DF$MinSupport>=callersSupport,]
       
-      if(nrow(DELETIONS_DF)>0){
-        #B find overlapping events
-        for (j in 1:nrow(DELETIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- DELETIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DELETIONS_DF$START[j], DELETIONS_DF$STOP[j]), IRanges(DELETIONS_DF$START, DELETIONS_DF$STOP), type="equal", maxgap = distanceThreshold) ), "ID"]
-          DELETIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
-        }
-        rm(DUPLICATES)
-        
-        #B collapse overlapping events
-        used <- character()
-        for (j in 1:nrow(DELETIONS_DF)){
-          if(!DELETIONS_DF$ID[j] %in% used){
-            # get matches
-            matches <- unlist(str_split(DELETIONS_DF$overlapWith[j],";"))
-            if(length(matches)!=0){
-              # df
-              temp <- DELETIONS_DF[which(DELETIONS_DF$ID %in% matches),]
-              # find max support CNV and use it
-              idx <- which.max(DELETIONS_DF$MinSupport)
-              temp$maxSupSTART[idx] <- temp$START[idx]
-              temp$maxSupSTOP[idx] <- temp$STOP[idx]
-              temp$MaxSupport[idx] <- max(temp$MinSupport)
-              temp$MinSupport[idx] <- min(temp$MinSupport)
-              temp$START[idx] <- min(temp$START)
-              temp$STOP[idx] <- max(temp$STOP)
-              #delete from pool
-              used <- append(used, temp$ID)
-              temp <- temp[idx,]
-              
-              #append new
-              DELETIONS_DF_tmp <- rbind(DELETIONS_DF_tmp,temp)
-              
-            }else(
-              #append current
-              DELETIONS_DF_tmp <- rbind(DELETIONS_DF_tmp, DELETIONS_DF[j,])
-            )
-          }
-        }
-        #replace and get new IDS
-        DELETIONS_DF <- DELETIONS_DF_tmp
-        DELETIONS_DF$ID <- c(1:nrow(DELETIONS_DF))
-        DELETIONS_DF$ID <- paste(contigNum,"DEL",DELETIONS_DF$ID,sep="_")
-        DELETIONS_DF$overlapWith <- ""
-        
-        #C BACKTRACKING
-        for (j in 1:nrow(DELETIONS_DF)){
-          # which callers called the region? and by how much
-          callers=""
-          if(any(which(cnproscanVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
-            
-            DELETIONS_DF$cnproscanPortion[j] <- as.integer(length(which(cnproscanVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
-            tmp <- which(cnproscanVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]>0)
-            DELETIONS_DF$cnproscanSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DELETIONS_DF$cnproscanPortion[j]>=95){callers <- paste(callers,"cnproscan",sep = ";")} # append to callers string
-          }
-          if(any(which(dellyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
-            DELETIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
-            tmp <- which(dellyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
-            DELETIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DELETIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
-            
-          }
-          if(any(which(lumpyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
-            DELETIONS_DF$lumpyPortion[j] <- as.integer(length(which(lumpyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
-            tmp <- which(lumpyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
-            DELETIONS_DF$lumpySubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DELETIONS_DF$lumpyPortion[j]>=95){callers <- paste(callers,"lumpy",sep = ";")} # append to callers string
-            
-          }
-          if(any(which(cnvnatorVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
-            DELETIONS_DF$cnvnatorPortion[j] <- as.integer(length(which(cnvnatorVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
-            tmp <- which(cnvnatorVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
-            DELETIONS_DF$cnvnatorSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DELETIONS_DF$cnvnatorPortion[j]>=95){callers <- paste(callers,"cnvnator",sep = ";")} # append to callers string
-            
-          }
-          if(any(which(pindelVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
-            DELETIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
-            tmp <- which(pindelVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
-            DELETIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DELETIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
-            
-          }
-          callers <- gsub("^;","",callers)
-          DELETIONS_DF$Callers[j] <- callers
-        }
-        
-        
-        #D find overlaps within
-        for (j in 1:nrow(DELETIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- DELETIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DELETIONS_DF$START[j], DELETIONS_DF$STOP[j]), IRanges(DELETIONS_DF$START[-j], DELETIONS_DF$STOP[-j]),type="within") ), "ID"]
-          # be careful, with IRanges(DELETIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
-          DELETIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
-          
-        }
-        rm(DUPLICATES)
+      
+      #B find overlapping events
+      for (j in 1:nrow(DELETIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- DELETIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DELETIONS_DF$START[j], DELETIONS_DF$STOP[j]), IRanges(DELETIONS_DF$START, DELETIONS_DF$STOP), type="equal", maxgap = 100) ), "ID"]
+        DELETIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
       }
+      rm(DUPLICATES)
+      
+      #B collapse overlapping events
+      used <- character()
+      for (j in 1:nrow(DELETIONS_DF)){
+        if(!DELETIONS_DF$ID[j] %in% used){
+          # get matches
+          matches <- unlist(str_split(DELETIONS_DF$overlapWith[j],";"))
+          if(length(matches)!=0){
+            # df
+            temp <- DELETIONS_DF[which(DELETIONS_DF$ID %in% matches),]
+            # find max support CNV and use it
+            idx <- which.max(DELETIONS_DF$MinSupport)
+            temp$maxSupSTART[idx] <- temp$START[idx]
+            temp$maxSupSTOP[idx] <- temp$STOP[idx]
+            temp$MaxSupport[idx] <- max(temp$MinSupport)
+            temp$MinSupport[idx] <- min(temp$MinSupport)
+            temp$START[idx] <- min(temp$START)
+            temp$STOP[idx] <- max(temp$STOP)
+            #delete from pool
+            used <- append(used, temp$ID)
+            temp <- temp[idx,]
+            
+            #append new
+            DELETIONS_DF_tmp <- rbind(DELETIONS_DF_tmp,temp)
+            
+          }else(
+            #append current
+            DELETIONS_DF_tmp <- rbind(DELETIONS_DF_tmp, DELETIONS_DF[j,])
+          )
+        }
+      }
+      #replace and get new IDS
+      DELETIONS_DF <- DELETIONS_DF_tmp
+      DELETIONS_DF$ID <- c(1:nrow(DELETIONS_DF))
+      DELETIONS_DF$ID <- paste(contigNum,"DEL",DELETIONS_DF$ID,sep="_")
+      DELETIONS_DF$overlapWith <- ""
+      
+      #C BACKTRACKING
+      for (j in 1:nrow(DELETIONS_DF)){
+        # which callers called the region? and by how much
+        callers=""
+        if(any(which(cnproscanVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
+          
+          DELETIONS_DF$cnproscanPortion[j] <- as.integer(length(which(cnproscanVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
+          tmp <- which(cnproscanVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]>0)
+          DELETIONS_DF$cnproscanSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DELETIONS_DF$cnproscanPortion[j]>=95){callers <- paste(callers,"cnproscan",sep = ";")} # append to callers string
+        }
+        if(any(which(dellyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
+          DELETIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
+          tmp <- which(dellyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
+          DELETIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DELETIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
+
+        }
+        if(any(which(lumpyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
+          DELETIONS_DF$lumpyPortion[j] <- as.integer(length(which(lumpyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
+          tmp <- which(lumpyVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
+          DELETIONS_DF$lumpySubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DELETIONS_DF$lumpyPortion[j]>=95){callers <- paste(callers,"lumpy",sep = ";")} # append to callers string
+
+        }
+        if(any(which(cnvnatorVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
+          DELETIONS_DF$cnvnatorPortion[j] <- as.integer(length(which(cnvnatorVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
+          tmp <- which(cnvnatorVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
+          DELETIONS_DF$cnvnatorSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DELETIONS_DF$cnvnatorPortion[j]>=95){callers <- paste(callers,"cnvnator",sep = ";")} # append to callers string
+
+        }
+        if(any(which(pindelVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))){
+          DELETIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0))/(DELETIONS_DF$LEN[j]/100))
+          tmp <- which(pindelVEC_DEL[(DELETIONS_DF$START[j]):(DELETIONS_DF$STOP[j])]!=0)
+          DELETIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DELETIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
+
+        }
+        callers <- gsub("^;","",callers)
+        DELETIONS_DF$Callers[j] <- callers
+      }
+      
+      
+      #D find overlaps within
+      for (j in 1:nrow(DELETIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- DELETIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DELETIONS_DF$START[j], DELETIONS_DF$STOP[j]), IRanges(DELETIONS_DF$START[-j], DELETIONS_DF$STOP[-j]),type="within") ), "ID"]
+        # be careful, with IRanges(DELETIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
+        DELETIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+        
+      }
+      rm(DUPLICATES)
     }
-    
+
     DELETIONS_DF <- DELETIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
                                     "maxSupSTART", "maxSupSTOP", 
                                     "Callers","overlapWith",
@@ -488,105 +487,104 @@ run_all <- function(args){
       # threshold callersSupport
       DUPLICATIONS_DF <- DUPLICATIONS_DF[DUPLICATIONS_DF$MinSupport>=callersSupport,]
       
-      if(nrow(DUPLICATIONS_DF)>0){
-        #B find overlapping events
-        for (j in 1:nrow(DUPLICATIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- DUPLICATIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DUPLICATIONS_DF$START[j], DUPLICATIONS_DF$STOP[j]), IRanges(DUPLICATIONS_DF$START, DUPLICATIONS_DF$STOP), type="equal", maxgap = distanceThreshold) ), "ID"]
-          DUPLICATIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+      
+      #B find overlapping events
+      for (j in 1:nrow(DUPLICATIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- DUPLICATIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DUPLICATIONS_DF$START[j], DUPLICATIONS_DF$STOP[j]), IRanges(DUPLICATIONS_DF$START, DUPLICATIONS_DF$STOP), type="equal", maxgap = 100) ), "ID"]
+        DUPLICATIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+      }
+      rm(DUPLICATES)
+      
+      #B collapse overlapping events
+      used <- character()
+      for (j in 1:nrow(DUPLICATIONS_DF)){
+        if(!DUPLICATIONS_DF$ID[j] %in% used){
+          # get matches
+          matches <- unlist(str_split(DUPLICATIONS_DF$overlapWith[j],";"))
+          if(length(matches)!=0){
+            # df
+            temp <- DUPLICATIONS_DF[which(DUPLICATIONS_DF$ID %in% matches),]
+            # find max support CNV and use it
+            idx <- which.max(DUPLICATIONS_DF$MinSupport)
+            temp$maxSupSTART[idx] <- temp$START[idx]
+            temp$maxSupSTOP[idx] <- temp$STOP[idx]
+            temp$MaxSupport[idx] <- max(temp$MinSupport)
+            temp$MinSupport[idx] <- min(temp$MinSupport)
+            temp$START[idx] <- min(temp$START)
+            temp$STOP[idx] <- max(temp$STOP)
+            #delete from pool
+            used <- append(used, temp$ID)
+            temp <- temp[idx,]
+            
+            #append new
+            DUPLICATIONS_DF_tmp <- rbind(DUPLICATIONS_DF_tmp,temp)
+            
+          }else(
+            #append current
+            DUPLICATIONS_DF_tmp <- rbind(DUPLICATIONS_DF_tmp, DUPLICATIONS_DF[j,])
+          )
         }
-        rm(DUPLICATES)
-        
-        #B collapse overlapping events
-        used <- character()
-        for (j in 1:nrow(DUPLICATIONS_DF)){
-          if(!DUPLICATIONS_DF$ID[j] %in% used){
-            # get matches
-            matches <- unlist(str_split(DUPLICATIONS_DF$overlapWith[j],";"))
-            if(length(matches)!=0){
-              # df
-              temp <- DUPLICATIONS_DF[which(DUPLICATIONS_DF$ID %in% matches),]
-              # find max support CNV and use it
-              idx <- which.max(DUPLICATIONS_DF$MinSupport)
-              temp$maxSupSTART[idx] <- temp$START[idx]
-              temp$maxSupSTOP[idx] <- temp$STOP[idx]
-              temp$MaxSupport[idx] <- max(temp$MinSupport)
-              temp$MinSupport[idx] <- min(temp$MinSupport)
-              temp$START[idx] <- min(temp$START)
-              temp$STOP[idx] <- max(temp$STOP)
-              #delete from pool
-              used <- append(used, temp$ID)
-              temp <- temp[idx,]
-              
-              #append new
-              DUPLICATIONS_DF_tmp <- rbind(DUPLICATIONS_DF_tmp,temp)
-              
-            }else(
-              #append current
-              DUPLICATIONS_DF_tmp <- rbind(DUPLICATIONS_DF_tmp, DUPLICATIONS_DF[j,])
-            )
-          }
+      }
+      #replace and get new IDS
+      DUPLICATIONS_DF <- DUPLICATIONS_DF_tmp
+      DUPLICATIONS_DF$ID <- c(1:nrow(DUPLICATIONS_DF))
+      DUPLICATIONS_DF$ID <- paste(contigNum,"DUP",DUPLICATIONS_DF$ID,sep="_")
+      DUPLICATIONS_DF$overlapWith <- ""
+      
+      #C BACKTRACKING
+      for (j in 1:nrow(DUPLICATIONS_DF)){
+        # which callers called the region? and by how much
+        callers=""
+        if(any(which(cnproscanVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
+          
+          DUPLICATIONS_DF$cnproscanPortion[j] <- as.integer(length(which(cnproscanVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
+          tmp <- which(cnproscanVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]>0)
+          DUPLICATIONS_DF$cnproscanSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DUPLICATIONS_DF$cnproscanPortion[j]>=95){callers <- paste(callers,"cnproscan",sep = ";")} # append to callers string
         }
-        #replace and get new IDS
-        DUPLICATIONS_DF <- DUPLICATIONS_DF_tmp
-        DUPLICATIONS_DF$ID <- c(1:nrow(DUPLICATIONS_DF))
-        DUPLICATIONS_DF$ID <- paste(contigNum,"DUP",DUPLICATIONS_DF$ID,sep="_")
-        DUPLICATIONS_DF$overlapWith <- ""
-        
-        #C BACKTRACKING
-        for (j in 1:nrow(DUPLICATIONS_DF)){
-          # which callers called the region? and by how much
-          callers=""
-          if(any(which(cnproscanVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
-            
-            DUPLICATIONS_DF$cnproscanPortion[j] <- as.integer(length(which(cnproscanVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
-            tmp <- which(cnproscanVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]>0)
-            DUPLICATIONS_DF$cnproscanSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DUPLICATIONS_DF$cnproscanPortion[j]>=95){callers <- paste(callers,"cnproscan",sep = ";")} # append to callers string
-          }
-          if(any(which(dellyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
-            DUPLICATIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
-            tmp <- which(dellyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
-            DUPLICATIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DUPLICATIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
-            
-          }
-          if(any(which(lumpyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
-            DUPLICATIONS_DF$lumpyPortion[j] <- as.integer(length(which(lumpyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
-            tmp <- which(lumpyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
-            DUPLICATIONS_DF$lumpySubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DUPLICATIONS_DF$lumpyPortion[j]>=95){callers <- paste(callers,"lumpy",sep = ";")} # append to callers string
-            
-          }
-          if(any(which(cnvnatorVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
-            DUPLICATIONS_DF$cnvnatorPortion[j] <- as.integer(length(which(cnvnatorVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
-            tmp <- which(cnvnatorVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
-            DUPLICATIONS_DF$cnvnatorSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DUPLICATIONS_DF$cnvnatorPortion[j]>=95){callers <- paste(callers,"cnvnator",sep = ";")} # append to callers string
-            
-          }
-          if(any(which(pindelVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
-            DUPLICATIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
-            tmp <- which(pindelVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
-            DUPLICATIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(DUPLICATIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
-            
-          }
-          callers <- gsub("^;","",callers)
-          DUPLICATIONS_DF$Callers[j] <- callers
-        }
-        
-        
-        #D find overlaps within
-        for (j in 1:nrow(DUPLICATIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- DUPLICATIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DUPLICATIONS_DF$START[j], DUPLICATIONS_DF$STOP[j]), IRanges(DUPLICATIONS_DF$START[-j], DUPLICATIONS_DF$STOP[-j]),type="within") ), "ID"]
-          # be careful, with IRanges(DUPLICATIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
-          DUPLICATIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+        if(any(which(dellyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
+          DUPLICATIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
+          tmp <- which(dellyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
+          DUPLICATIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DUPLICATIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
           
         }
-        rm(DUPLICATES)
+        if(any(which(lumpyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
+          DUPLICATIONS_DF$lumpyPortion[j] <- as.integer(length(which(lumpyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
+          tmp <- which(lumpyVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
+          DUPLICATIONS_DF$lumpySubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DUPLICATIONS_DF$lumpyPortion[j]>=95){callers <- paste(callers,"lumpy",sep = ";")} # append to callers string
+          
+        }
+        if(any(which(cnvnatorVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
+          DUPLICATIONS_DF$cnvnatorPortion[j] <- as.integer(length(which(cnvnatorVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
+          tmp <- which(cnvnatorVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
+          DUPLICATIONS_DF$cnvnatorSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DUPLICATIONS_DF$cnvnatorPortion[j]>=95){callers <- paste(callers,"cnvnator",sep = ";")} # append to callers string
+          
+        }
+        if(any(which(pindelVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))){
+          DUPLICATIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0))/(DUPLICATIONS_DF$LEN[j]/100))
+          tmp <- which(pindelVEC_DUP[(DUPLICATIONS_DF$START[j]):(DUPLICATIONS_DF$STOP[j])]!=0)
+          DUPLICATIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(DUPLICATIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
+          
+        }
+        callers <- gsub("^;","",callers)
+        DUPLICATIONS_DF$Callers[j] <- callers
       }
+      
+      
+      #D find overlaps within
+      for (j in 1:nrow(DUPLICATIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- DUPLICATIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(DUPLICATIONS_DF$START[j], DUPLICATIONS_DF$STOP[j]), IRanges(DUPLICATIONS_DF$START[-j], DUPLICATIONS_DF$STOP[-j]),type="within") ), "ID"]
+        # be careful, with IRanges(DUPLICATIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
+        DUPLICATIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+        
+      }
+      rm(DUPLICATES)
     }
     
     DUPLICATIONS_DF <- DUPLICATIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
@@ -655,88 +653,87 @@ run_all <- function(args){
       INSERTIONS_DF$SVTYPE <- "INS"
       
       # threshold callersSupport
-      # INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupport,]
+      INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupport,]
       
-      if(nrow(INSERTIONS_DF)>0){
-        #B find overlapping events
-        for (j in 1:nrow(INSERTIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- INSERTIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INSERTIONS_DF$START[j], INSERTIONS_DF$STOP[j]), IRanges(INSERTIONS_DF$START, INSERTIONS_DF$STOP), type="equal", maxgap = distanceThreshold) ), "ID"]
-          INSERTIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
-        }
-        rm(DUPLICATES)
-        
-        #B collapse overlapping events
-        used <- character()
-        for (j in 1:nrow(INSERTIONS_DF)){
-          if(!INSERTIONS_DF$ID[j] %in% used){
-            # get matches
-            matches <- unlist(str_split(INSERTIONS_DF$overlapWith[j],";"))
-            if(length(matches)!=0){
-              # df
-              temp <- INSERTIONS_DF[which(INSERTIONS_DF$ID %in% matches),]
-              # find max support CNV and use it
-              idx <- which.max(INSERTIONS_DF$MinSupport)
-              temp$maxSupSTART[idx] <- temp$START[idx]
-              temp$maxSupSTOP[idx] <- temp$STOP[idx]
-              temp$MaxSupport[idx] <- max(temp$MinSupport)
-              temp$MinSupport[idx] <- min(temp$MinSupport)
-              temp$START[idx] <- min(temp$START)
-              temp$STOP[idx] <- max(temp$STOP)
-              #delete from pool
-              used <- append(used, temp$ID)
-              temp <- temp[idx,]
-              
-              #append new
-              INSERTIONS_DF_tmp <- rbind(INSERTIONS_DF_tmp,temp)
-              
-            }else(
-              #append current
-              INSERTIONS_DF_tmp <- rbind(INSERTIONS_DF_tmp, INSERTIONS_DF[j,])
-            )
-          }
-        }
-        #replace and get new IDS
-        INSERTIONS_DF <- INSERTIONS_DF_tmp
-        INSERTIONS_DF$ID <- c(1:nrow(INSERTIONS_DF))
-        INSERTIONS_DF$ID <- paste(contigNum,"INS",INSERTIONS_DF$ID,sep="_")
-        INSERTIONS_DF$overlapWith <- ""
-        
-        #C BACKTRACKING
-        for (j in 1:nrow(INSERTIONS_DF)){
-          # which callers called the region? and by how much
-          callers=""
-          
-          if(any(which(dellyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))){
-            INSERTIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))/(INSERTIONS_DF$LEN[j]/100))
-            tmp <- which(dellyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0)
-            INSERTIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INSERTIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
-            
-          }
-          
-          if(any(which(pindelVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))){
-            INSERTIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))/(INSERTIONS_DF$LEN[j]/100))
-            tmp <- which(pindelVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0)
-            INSERTIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INSERTIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
-            
-          }
-          callers <- gsub("^;","",callers)
-          INSERTIONS_DF$Callers[j] <- callers
-        }
-        
-        
-        #D find overlaps within
-        for (j in 1:nrow(INSERTIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- INSERTIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INSERTIONS_DF$START[j], INSERTIONS_DF$STOP[j]), IRanges(INSERTIONS_DF$START[-j], INSERTIONS_DF$STOP[-j]),type="within") ), "ID"]
-          # be careful, with IRanges(INSERTIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
-          INSERTIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
-          
-        }
-        rm(DUPLICATES)
+      
+      #B find overlapping events
+      for (j in 1:nrow(INSERTIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- INSERTIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INSERTIONS_DF$START[j], INSERTIONS_DF$STOP[j]), IRanges(INSERTIONS_DF$START, INSERTIONS_DF$STOP), type="equal", maxgap = 100) ), "ID"]
+        INSERTIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
       }
+      rm(DUPLICATES)
+      
+      #B collapse overlapping events
+      used <- character()
+      for (j in 1:nrow(INSERTIONS_DF)){
+        if(!INSERTIONS_DF$ID[j] %in% used){
+          # get matches
+          matches <- unlist(str_split(INSERTIONS_DF$overlapWith[j],";"))
+          if(length(matches)!=0){
+            # df
+            temp <- INSERTIONS_DF[which(INSERTIONS_DF$ID %in% matches),]
+            # find max support CNV and use it
+            idx <- which.max(INSERTIONS_DF$MinSupport)
+            temp$maxSupSTART[idx] <- temp$START[idx]
+            temp$maxSupSTOP[idx] <- temp$STOP[idx]
+            temp$MaxSupport[idx] <- max(temp$MinSupport)
+            temp$MinSupport[idx] <- min(temp$MinSupport)
+            temp$START[idx] <- min(temp$START)
+            temp$STOP[idx] <- max(temp$STOP)
+            #delete from pool
+            used <- append(used, temp$ID)
+            temp <- temp[idx,]
+            
+            #append new
+            INSERTIONS_DF_tmp <- rbind(INSERTIONS_DF_tmp,temp)
+            
+          }else(
+            #append current
+            INSERTIONS_DF_tmp <- rbind(INSERTIONS_DF_tmp, INSERTIONS_DF[j,])
+          )
+        }
+      }
+      #replace and get new IDS
+      INSERTIONS_DF <- INSERTIONS_DF_tmp
+      INSERTIONS_DF$ID <- c(1:nrow(INSERTIONS_DF))
+      INSERTIONS_DF$ID <- paste(contigNum,"INS",INSERTIONS_DF$ID,sep="_")
+      INSERTIONS_DF$overlapWith <- ""
+      
+      #C BACKTRACKING
+      for (j in 1:nrow(INSERTIONS_DF)){
+        # which callers called the region? and by how much
+        callers=""
+    
+        if(any(which(dellyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))){
+          INSERTIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))/(INSERTIONS_DF$LEN[j]/100))
+          tmp <- which(dellyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0)
+          INSERTIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(INSERTIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
+          
+        }
+        
+        if(any(which(pindelVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))){
+          INSERTIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))/(INSERTIONS_DF$LEN[j]/100))
+          tmp <- which(pindelVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0)
+          INSERTIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(INSERTIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
+          
+        }
+        callers <- gsub("^;","",callers)
+        INSERTIONS_DF$Callers[j] <- callers
+      }
+      
+      
+      #D find overlaps within
+      for (j in 1:nrow(INSERTIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- INSERTIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INSERTIONS_DF$START[j], INSERTIONS_DF$STOP[j]), IRanges(INSERTIONS_DF$START[-j], INSERTIONS_DF$STOP[-j]),type="within") ), "ID"]
+        # be careful, with IRanges(INSERTIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
+        INSERTIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+        
+      }
+      rm(DUPLICATES)
     }
     
     INSERTIONS_DF <- INSERTIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
@@ -804,88 +801,87 @@ run_all <- function(args){
       INVERSIONS_DF$SVTYPE <- "INV"
       
       # threshold callersSupport
-      # INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupport,]
+      INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupport,]
       
-      if(nrow(INVERSIONS_DF)>0){
-        #B find overlapping events
-        for (j in 1:nrow(INVERSIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- INVERSIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INVERSIONS_DF$START[j], INVERSIONS_DF$STOP[j]), IRanges(INVERSIONS_DF$START, INVERSIONS_DF$STOP), type="equal", maxgap = distanceThreshold) ), "ID"]
-          INVERSIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
-        }
-        rm(DUPLICATES)
-        
-        #B collapse overlapping events
-        used <- character()
-        for (j in 1:nrow(INVERSIONS_DF)){
-          if(!INVERSIONS_DF$ID[j] %in% used){
-            # get matches
-            matches <- unlist(str_split(INVERSIONS_DF$overlapWith[j],";"))
-            if(length(matches)!=0){
-              # df
-              temp <- INVERSIONS_DF[which(INVERSIONS_DF$ID %in% matches),]
-              # find max support CNV and use it
-              idx <- which.max(INVERSIONS_DF$MinSupport)
-              temp$maxSupSTART[idx] <- temp$START[idx]
-              temp$maxSupSTOP[idx] <- temp$STOP[idx]
-              temp$MaxSupport[idx] <- max(temp$MinSupport)
-              temp$MinSupport[idx] <- min(temp$MinSupport)
-              temp$START[idx] <- min(temp$START)
-              temp$STOP[idx] <- max(temp$STOP)
-              #delete from pool
-              used <- append(used, temp$ID)
-              temp <- temp[idx,]
-              
-              #append new
-              INVERSIONS_DF_tmp <- rbind(INVERSIONS_DF_tmp,temp)
-              
-            }else(
-              #append current
-              INVERSIONS_DF_tmp <- rbind(INVERSIONS_DF_tmp, INVERSIONS_DF[j,])
-            )
-          }
-        }
-        #replace and get new IDS
-        INVERSIONS_DF <- INVERSIONS_DF_tmp
-        INVERSIONS_DF$ID <- c(1:nrow(INVERSIONS_DF))
-        INVERSIONS_DF$ID <- paste(contigNum,"INV",INVERSIONS_DF$ID,sep="_")
-        INVERSIONS_DF$overlapWith <- ""
-        
-        #C BACKTRACKING
-        for (j in 1:nrow(INVERSIONS_DF)){
-          # which callers called the region? and by how much
-          callers=""
-          
-          if(any(which(dellyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))){
-            INVERSIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))/(INVERSIONS_DF$LEN[j]/100))
-            tmp <- which(dellyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0)
-            INVERSIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INVERSIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
-            
-          }
-          
-          if(any(which(pindelVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))){
-            INVERSIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))/(INVERSIONS_DF$LEN[j]/100))
-            tmp <- which(pindelVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0)
-            INVERSIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INVERSIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
-            
-          }
-          callers <- gsub("^;","",callers)
-          INVERSIONS_DF$Callers[j] <- callers
-        }
-        
-        
-        #D find overlaps within
-        for (j in 1:nrow(INVERSIONS_DF)){
-          # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
-          DUPLICATES <- INVERSIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INVERSIONS_DF$START[j], INVERSIONS_DF$STOP[j]), IRanges(INVERSIONS_DF$START[-j], INVERSIONS_DF$STOP[-j]),type="within") ), "ID"]
-          # be careful, with IRanges(INVERSIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
-          INVERSIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
-          
-        }
-        rm(DUPLICATES)
+      
+      #B find overlapping events
+      for (j in 1:nrow(INVERSIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- INVERSIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INVERSIONS_DF$START[j], INVERSIONS_DF$STOP[j]), IRanges(INVERSIONS_DF$START, INVERSIONS_DF$STOP), type="equal", maxgap = 100) ), "ID"]
+        INVERSIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
       }
+      rm(DUPLICATES)
+      
+      #B collapse overlapping events
+      used <- character()
+      for (j in 1:nrow(INVERSIONS_DF)){
+        if(!INVERSIONS_DF$ID[j] %in% used){
+          # get matches
+          matches <- unlist(str_split(INVERSIONS_DF$overlapWith[j],";"))
+          if(length(matches)!=0){
+            # df
+            temp <- INVERSIONS_DF[which(INVERSIONS_DF$ID %in% matches),]
+            # find max support CNV and use it
+            idx <- which.max(INVERSIONS_DF$MinSupport)
+            temp$maxSupSTART[idx] <- temp$START[idx]
+            temp$maxSupSTOP[idx] <- temp$STOP[idx]
+            temp$MaxSupport[idx] <- max(temp$MinSupport)
+            temp$MinSupport[idx] <- min(temp$MinSupport)
+            temp$START[idx] <- min(temp$START)
+            temp$STOP[idx] <- max(temp$STOP)
+            #delete from pool
+            used <- append(used, temp$ID)
+            temp <- temp[idx,]
+            
+            #append new
+            INVERSIONS_DF_tmp <- rbind(INVERSIONS_DF_tmp,temp)
+            
+          }else(
+            #append current
+            INVERSIONS_DF_tmp <- rbind(INVERSIONS_DF_tmp, INVERSIONS_DF[j,])
+          )
+        }
+      }
+      #replace and get new IDS
+      INVERSIONS_DF <- INVERSIONS_DF_tmp
+      INVERSIONS_DF$ID <- c(1:nrow(INVERSIONS_DF))
+      INVERSIONS_DF$ID <- paste(contigNum,"INV",INVERSIONS_DF$ID,sep="_")
+      INVERSIONS_DF$overlapWith <- ""
+      
+      #C BACKTRACKING
+      for (j in 1:nrow(INVERSIONS_DF)){
+        # which callers called the region? and by how much
+        callers=""
+        
+        if(any(which(dellyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))){
+          INVERSIONS_DF$delly2Portion[j] <- as.integer(length(which(dellyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))/(INVERSIONS_DF$LEN[j]/100))
+          tmp <- which(dellyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0)
+          INVERSIONS_DF$delly2Subevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(INVERSIONS_DF$delly2Portion[j]>=95){callers <- paste(callers,"delly2",sep = ";")} # append to callers string
+          
+        }
+       
+        if(any(which(pindelVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))){
+          INVERSIONS_DF$pindelPortion[j] <- as.integer(length(which(pindelVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))/(INVERSIONS_DF$LEN[j]/100))
+          tmp <- which(pindelVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0)
+          INVERSIONS_DF$pindelSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
+          if(INVERSIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
+          
+        }
+        callers <- gsub("^;","",callers)
+        INVERSIONS_DF$Callers[j] <- callers
+      }
+      
+      
+      #D find overlaps within
+      for (j in 1:nrow(INVERSIONS_DF)){
+        # https://stackoverflow.com/questions/37754509/finding-overlapping-intervals
+        DUPLICATES <- INVERSIONS_DF[subjectHits(IRanges::findOverlaps(IRanges(INVERSIONS_DF$START[j], INVERSIONS_DF$STOP[j]), IRanges(INVERSIONS_DF$START[-j], INVERSIONS_DF$STOP[-j]),type="within") ), "ID"]
+        # be careful, with IRanges(INVERSIONS_DF$START[-j]  was returned weird results, thus removed in previous overlaps
+        INVERSIONS_DF$overlapWith[j] <- as.character(paste(DUPLICATES, collapse = ";"))
+        
+      }
+      rm(DUPLICATES)
     }
     
     INVERSIONS_DF <- INVERSIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
@@ -911,7 +907,6 @@ run_all <- function(args){
   #######################################################################################################################
   #sort
   SHORT_RESULTS <- SHORT_RESULTS[order(SHORT_RESULTS$CHROMOSOME, SHORT_RESULTS$START),]
-  SHORT_RESULTS$SAMPLE <- sample_name
   
   #write TABLE
   dir.create(file.path(getwd(),dirname(output)), recursive = TRUE,showWarnings = FALSE)
@@ -1010,9 +1005,14 @@ run_all <- function(args){
 
 
 # develop and test
-# args <- c("results/merged_procaryaSV/coverage20.procaryaSV_callers_merge.tsv","results/merged_procaryaSV/coverage20.procaryaSV_venn.png","results/merged_procaryaSV/coverage20.procaryaSV_sv_types.png","results/references/FN433596.fasta","10","NA","2","2000","results/lumpy/coverage20/coverage20.vcf","results/delly2/coverage20/coverage20.vcf","results/cnvnator/coverage20/coverage20.vcf","results/pindel/coverage20/coverage20.vcf","results/cnproscan/coverage20/coverage20.vcf")
-
-# setwd("/home/rj/4TB/PHD_TESTING/artificial_ProcaryaSV/")
+# args <- c("resultsTEST/vcf_merged/S01.procaryaSV_merge0.tsv",
+#           "resultsTEST/vcf_merged/S01.procaryaSV_merge0_venn.png","resultsTEST/vcf_merged/S01.procaryaSV_merge0_barchart.png",
+#           "results/references/KP_ref.fasta",
+#           NA,NA,NA,NA,
+#           "results/lumpy/S01/S01.vcf","results/delly2/S01/S01.vcf",
+#           "results/cnvnator/S01/S01.vcf","results/pindel/S01/S01.vcf",
+#           "results/cnproscan/S01/S01.vcf")
+# setwd("/home/rj/4TB/PHD_TESTING/K.pneumoniae/")
 
 #run as Rscript
 args <- commandArgs(trailingOnly = T)
