@@ -1,7 +1,7 @@
 # ProcaryaSV
 ProcaryaSV is a [Snakemake](https://snakemake.readthedocs.io/en/stable/) pipeline to call SV, mainly CNVs from bacterial genomes. 
-It employs 5 callers - DELLY2, LUMPY, Pindel, CNVnator and CNproScan. 
-It provides two comparable outputs of merged SV - by ProcaryaSV's merging and by SURVIVOR's merge command. 
+It employs 5 callers - [DELLY2](https://github.com/dellytools/delly), [LUMPY](https://github.com/arq5x/lumpy-sv), [Pindel](https://github.com/genome/pindel), [CNVnator](https://github.com/abyzovlab/CNVnator) and [CNproScan](https://github.com/robinjugas/CNproScan). 
+It provides two comparable outputs of merged SV - by ProcaryaSV's merging and by [SURVIVOR's](https://github.com/fritzsedlazeck/SURVIVOR) merge command. 
 It starts with optional read trimming, reads alignment and then proceeds to CNV/SV calling. 
 
 ## Snakemake environment
