@@ -1,8 +1,18 @@
 # ProcaryaSV
-ProcaryaSV is a Snakemake pipeline to call SV, mainly CNVs from bacterial genomes. 
+ProcaryaSV is a [Snakemake](https://snakemake.readthedocs.io/en/stable/) pipeline to call SV, mainly CNVs from bacterial genomes. 
 It employs 5 callers - DELLY2, LUMPY, Pindel, CNVnator and CNproScan. 
 It provides two comparable outputs of merged SV - by ProcaryaSV's merging and by SURVIVOR's merge command. 
 It starts with optional read trimming, reads alignment and then proceeds to CNV/SV calling. 
+
+## Snakemake environment
+Snakemake workflow management can run inside [conda](https://docs.conda.io/en/latest/). Create the conda snakemake environemnt easily with conda:
+```
+conda create --name snakemake_environment -c bioconda -c conda-forge snakemake mamba
+```
+or setup the environment path:
+```
+conda create --prefix /path/snakemake_environment -c bioconda -c conda-forge snakemake mamba
+```
 
 ## ProcaryaSV inputs:
 <ul>
