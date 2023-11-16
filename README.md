@@ -13,19 +13,22 @@ It provides two comparable outputs of merged SV - by ProcaryaSV's merging and by
 
 ## EXAMPLE_DATA Folder Structure:
 Please, create the initial following structure and place the data within:
+```
 EXAMPLE_DATA/results/raw_reads    (EXAMPLE_DATA is folder name defined by you)
+```
 
 Other folders created lately by pipeline:
---EXAMPLE_DATA/results  (EXAMPLE_DATA is folder name defined by you)
-        - raw_reads - create first and put the sequencing reads here
-        - callers_name - created by pipeline - folders for each SV/CNV caller's results
-        - references - created by pipeline - alignment indexes
-        - mapped - created by pipeline - BAM files
-        - merged_procaryaSV - created by pipeline - procaryaSV CNV and SV called
-        - merged_survivor - created by pipeline - survivor CNV and SV called
-        - reports - created by pipeline - Qualimap, FastQC, Picard reports
+```
+EXAMPLE_DATA/results  (EXAMPLE_DATA is folder name defined by you)
+    - raw_reads - create first and put the sequencing reads here
+    - callers_name - created by pipeline - folders for each SV/CNV caller's results
+    - references - created by pipeline - alignment indexes
+    - mapped - created by pipeline - BAM files
+    - merged_procaryaSV - created by pipeline - procaryaSV CNV and SV called
+    - merged_survivor - created by pipeline - survivor CNV and SV called
+    - reports - created by pipeline - Qualimap, FastQC, Picard reports
 --EXAMPLE_DATA/results/logs - created by pipeline, logs stored here
-
+```
 
 ## Outputs:
 <ul>
@@ -38,8 +41,9 @@ Other folders created lately by pipeline:
 
 ## How to RUN the ProcaryaSV pipelie
 When you have filled the yaml configuration file and put the files in the folder structure you can start the Snakemake pipeline with this command:
-
+```
 snakemake --cores 12 --snakefile path_to_pipeline/Snakefile --directory path_to_DATA --configfile path/config.yaml --use-conda 
+```
 
 --cores 12 - define number of threads
 --snakefile path_to_pipeline/Snakefile - define the path to the ProcaryaSV  Snakefile
