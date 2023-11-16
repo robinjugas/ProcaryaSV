@@ -6,9 +6,9 @@ It provides two comparable outputs of merged SV - by ProcaryaSV's merging and by
 
 ## Inputs:
 <ul>
-<li>yaml configuration file -- you can find the example in config.yaml with all parameters </li>
-<li>sequencing reads --  place reads in the folder structure: "EXAMPLE_DATA/results/raw_reads". The path structure /results/raw_reads is necessary. EXAMPLE_DATA is folder name defined by you.  </li>
-<li>fasta reference file -- filename and filepath specified in the yaml configuration file </li> 
+<li><strong>yaml configuration file</strong> -- you can find the example in config.yaml with all parameters </li>
+<li><strong>sequencing reads</strong> --  place reads in the folder structure: "EXAMPLE_DATA/results/raw_reads". The path structure /results/raw_reads is necessary. EXAMPLE_DATA is folder name defined by you.  </li>
+<li><strong>fasta reference file</strong> -- filename and filepath specified in the yaml configuration file </li> 
 </ul>
 
 ## EXAMPLE_DATA Folder Structure:
@@ -32,11 +32,11 @@ EXAMPLE_DATA/results  (EXAMPLE_DATA is folder name defined by you)
 
 ## Outputs:
 <ul>
-<li> **results/merged_procaryaSV** - ProcaryaSV TSV files with merged SVs; Venn diagrams; SV types representation plots </li>
-<li> **results/merged_survivor** - SURVIVOR VCF files with merged SVs </li>
-<li> **results/mapped** - BAM files </li>
-<li> **results/reports** - various reports from FASTQC, Picard and Qualimap and </li>
-<li> **results/{delly2;lumpy;cnvnator;cnproscan;pindel}** - caller's outputs </li>
+<li> <strong>results/merged_procaryaSV</strong> - ProcaryaSV TSV files with merged SVs; Venn diagrams; SV types representation plots </li>
+<li> <strong>results/merged_survivor</strong> - SURVIVOR VCF files with merged SVs </li>
+<li> <strong>results/mapped</strong> - BAM files </li>
+<li> <strong>results/reports</strong> - various reports from FASTQC, Picard and Qualimap and </li>
+<li> <strong>results/{delly2;lumpy;cnvnator;cnproscan;pindel}</strong> - caller's outputs </li>
 </ul>
 
 ## How to RUN the ProcaryaSV pipelie
