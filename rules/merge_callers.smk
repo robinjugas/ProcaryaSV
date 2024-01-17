@@ -1,3 +1,4 @@
+
 # procaryaSV  MERGE
 rule procaryaSV_callers_merge:
     input:
@@ -11,7 +12,8 @@ rule procaryaSV_callers_merge:
         sample_name="{SAMPLE}",
         min_sv_length=config["procaryaSV_min_sv_length"],
         max_sv_length=config["procaryaSV_max_sv_length"], # NA means default value which is 1/3 of reference genome length
-        minCallers=config["procaryaSV_minCallers"],
+        minCallersCNV=config["procaryaSV_minCallersCNV"], # for CNV called by 5 tools [DEL,DUP]
+        minCallersSV=config["procaryaSV_minCallersSV"], # for SVs called by ~3 tools [INS, INV]
         maxGap=config["procaryaSV_maxGap"],
     log:
         "logs/procaryaSV_callers_merge/{SAMPLE}.log",
@@ -20,11 +22,19 @@ rule procaryaSV_callers_merge:
         os.path.join(workflow.basedir,"envs/procaryaSV.yaml")
     script: os.path.join(workflow.basedir,"wrappers/procaryaSV_callers_merge/script.py")
 
+####################################################################################################
+# # survivor_merge - remove breseq which generates GD but not VCF
+# def survivor_merge_input(wildcards):
+#     if "breseq" in SVcallers: #true
+#         SVcallersSURVIVOR = SVcallers.remove("breseq")
+#         return expand("results/{cnv_caller}/{{SAMPLE}}/{{SAMPLE}}.vcf",cnv_caller=SVcallersSURVIVOR)
+#     else: #false
+#         return expand("results/{cnv_caller}/{{SAMPLE}}/{{SAMPLE}}.vcf",cnv_caller=SVcallers)
 
 # SURVIVOR MERGE
 rule survivor_merge:
     input:
-        vcfs=expand("results/{cnv_caller}/{{SAMPLE}}/{{SAMPLE}}.vcf",cnv_caller=SVcallers),
+        vcfs=expand("results/{cnv_caller}/{{SAMPLE}}/{{SAMPLE}}.vcf",cnv_caller=SVcallers)
     output:
         vcf="results/merged_survivor/{SAMPLE}.survivor_merged.vcf",
     params:
@@ -44,7 +54,7 @@ rule survivor_merge:
         os.path.join(workflow.basedir,"wrappers/survivor/script.py")
 
 
-
+####################################################################################################
 # # procaryaSV SAMPLES MERGE
 # rule procaryaSV_samples_merge:
 #     input:

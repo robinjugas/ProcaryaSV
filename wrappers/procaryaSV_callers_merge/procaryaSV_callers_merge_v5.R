@@ -7,10 +7,6 @@ library(ggplot2)
 library(RColorBrewer)
 library(IRanges)
 
-# https://stackoverflow.com/questions/23254002/how-can-i-check-if-a-file-is-empty
-file.empty <- function(filenames){isTRUE(all.equal(file.info(filenames)$size, 0))}
-
-
 run_all <- function(args){
   # arguments
   output <- args[1]
@@ -20,21 +16,15 @@ run_all <- function(args){
   sample_name <- args[5] 
   min_sv_length <- as.integer(args[6]) #default 1 
   max_sv_length <- as.integer(args[7]) #default refLength/3
-  callersSupportCNV <- as.integer(args[8])
-  callersSupportSV<- as.integer(args[9])
-  distanceThreshold <- as.integer(args[10]) 
-  vcf_files <- args[11:length(args)]
-  
-  ## Insertion Boundary Extension Parameter
-  insBoundaryPlus <- 25
+  callersSupport <- as.integer(args[8]) 
+  distanceThreshold <- as.integer(args[9]) 
+  vcf_files <- args[10:length(args)]
   
   ## DEFAULT VALUES
   numCallers <- length(vcf_files)
   if(is.na(distanceThreshold)){distanceThreshold <- 2000} #default
   if(is.na(min_sv_length)){min_sv_length <- 50} #default
-  if(is.na(callersSupportCNV)){callersSupportCNV <- 3} #default
-  if(is.na(callersSupportSV)){callersSupportSV <- 2} #default
-  
+  if(is.na(callersSupport)){callersSupport <- 0} #default
   # max_sv_length depends on chromosome length
   
   ## read FASTA
@@ -48,15 +38,12 @@ run_all <- function(args){
   cnvnator <- vcf_files[which(grepl( "cnvnator", vcf_files, fixed = TRUE))]
   pindel <- vcf_files[which(grepl( "pindel", vcf_files, fixed = TRUE))]
   cnproscan <- vcf_files[which(grepl( "cnproscan", vcf_files, fixed = TRUE))]
-  # newly added
-  insurveyor <- vcf_files[which(grepl( "insurveyor", vcf_files, fixed = TRUE))]
-  # breseq <- vcf_files[which(grepl( "breseq", vcf_files, fixed = TRUE))]
   
   ##############################################################################
   ## LOAD VCF FILES
   
   #DELLY2
-  if( !identical(delly, character(0)) & !file.empty(delly) ){
+  if(!identical(delly, character(0))){
     dellyDF <- fread(file=delly, sep='\t', header = TRUE, skip = '#CHROM')
     if(nrow(dellyDF)){
       dellyDF <- dellyDF[!grepl("SVTYPE=BND", dellyDF$INFO),]
@@ -76,7 +63,7 @@ run_all <- function(args){
   }
   
   # LUMPY
-  if( !identical(lumpy, character(0)) & !file.empty(lumpy) ){
+  if(!identical(lumpy, character(0))){
     lumpyDF <- fread(file=lumpy, sep='\t', header = TRUE, skip = '#CHROM')
     if(nrow(lumpyDF)){
       lumpyDF <- lumpyDF[!grepl("SVTYPE=BND", lumpyDF$INFO),]
@@ -96,7 +83,7 @@ run_all <- function(args){
   }
   
   # cnvnator
-  if( !identical(cnvnator, character(0)) & !file.empty(cnvnator) ){
+  if(!identical(cnvnator, character(0))){
     cnvnatorDF <- fread(file=cnvnator, sep='\t', header = TRUE, skip = '#CHROM')
     if(nrow(cnvnatorDF)){
       cnvnatorDF <- cnvnatorDF[!grepl("BND", cnvnatorDF$INFO),]
@@ -116,7 +103,7 @@ run_all <- function(args){
   }
   
   # pindel
-  if( !identical(pindel, character(0)) & !file.empty(pindel) ){
+  if(!identical(pindel, character(0))){
     pindelDF <- fread(file=pindel, sep='\t', header = TRUE, skip = '#CHROM')
     if(nrow(pindelDF)){
       pindelDF <- pindelDF[!grepl("BND", pindelDF$INFO),]
@@ -136,7 +123,7 @@ run_all <- function(args){
   }
   
   # cnproscan
-  if( !identical(cnproscan, character(0)) & !file.empty(cnproscan) ){
+  if(!identical(cnproscan, character(0))){
     cnproscanDF <- fread(file=cnproscan, sep='\t', header = TRUE, skip = '#CHROM')
     if(nrow(cnproscanDF)){
       cnproscanDF <- cnproscanDF[!grepl("BND", cnproscanDF$INFO),]
@@ -156,54 +143,6 @@ run_all <- function(args){
     cnproscanDF <- data.table("#CHROM"=character(),"POS"=numeric(),"END"=numeric(),"SVTYPE"=character(),"CALLER"=character(),"VCF_INFO"=character(),"LEN"=numeric() )
   }
   
-  # insurveyor
-  if( !identical(insurveyor, character(0)) & !file.empty(insurveyor) ){
-    insurveyorDF <- fread(file=insurveyor, sep='\t', header = TRUE, skip = '#CHROM')
-    if(nrow(insurveyorDF)){
-      insurveyorDF <- insurveyorDF[!grepl("SVTYPE=BND", insurveyorDF$INFO),]
-      insurveyorDF$END <- sapply(insurveyorDF$INFO, function(x)   str_extract(str_extract(x,"END=*?([0-9]+)"),"[0-9]+"))
-      insurveyorDF$SVTYPE <- insurveyorDF$ALT
-      insurveyorDF$CALLER <- "insurveyor"
-      
-      insurveyorDF$SEQ <- sapply(insurveyorDF$INFO, function(x)   str_split(str_extract(x,"SVINSSEQ=*?([A-Z]+)"),"=")[[1]][2] )
-      insurveyorDF$INSERTLEN <- sapply(insurveyorDF$INFO, function(x)   str_extract(str_extract(x,"SVINSLEN=*?([0-9]+)"),"[0-9]+"))
-
-      insurveyorDF$VCF_INFO <- paste0("INSERT_LEN:",insurveyorDF$INSERTLEN,"\t","INSERT_SEQ:",insurveyorDF$SEQ,"\t")
-      insurveyorDF <- insurveyorDF[,c("#CHROM","POS","END","SVTYPE","CALLER","VCF_INFO")]
-      insurveyorDF$END <- as.numeric(insurveyorDF$END)
-      insurveyorDF$POS <- as.numeric(insurveyorDF$POS)
-      insurveyorDF$LEN <- insurveyorDF$END - insurveyorDF$POS
-      insurveyorDF$SVTYPE <- gsub("<", "", insurveyorDF$SVTYPE) #remove < from SVTYPE
-      insurveyorDF$SVTYPE <- gsub(">", "", insurveyorDF$SVTYPE) #remove < from SVTYPE
-    }else{insurveyor <- character(0)}
-  }else{
-    insurveyorDF <- data.table("#CHROM"=character(),"POS"=numeric(),"END"=numeric(),"SVTYPE"=character(),"CALLER"=character(),"VCF_INFO"=character(),"LEN"=numeric() )
-  }
-  
-  
-  # #NEW breseq that is actually not VCF
-  # if(!identical(breseq, character(0)) & !file.empty(breseq) ){
-  #   breseqDF <- fread(file=breseq, sep='\t', header = FALSE, skip = '#=MAPPED-READS',fill=TRUE)
-  #   if(nrow(breseqDF)){
-  #     
-  #     breseqDF <- breseqDF[!grepl("BND", breseqDF$INFO),]
-  #     breseqDF$LEN <- sapply(breseqDF$INFO, function(x)   str_extract(str_extract(x,"SVLEN=*?([0-9]+)"),"[0-9]+"))
-  #     breseqDF$END <- sapply(breseqDF$INFO, function(x)   str_extract(str_extract(x,"END=*?([0-9]+)"),"[0-9]+"))
-  #     breseqDF$SVTYPE <- breseqDF$ALT
-  #     breseqDF$CALLER <- "breseq"
-  #     breseqDF$VCF_INFO <- paste0("INFO:",breseqDF$INFO)
-  #     breseqDF <- breseqDF[,c("#CHROM","POS","END","SVTYPE","CALLER","VCF_INFO")]
-  #     breseqDF$END <- as.numeric(breseqDF$END)
-  #     breseqDF$POS <- as.numeric(breseqDF$POS)
-  #     breseqDF$LEN <- breseqDF$END - breseqDF$POS
-  #     breseqDF$SVTYPE <- gsub("<", "", breseqDF$SVTYPE) #remove < from SVTYPE
-  #     breseqDF$SVTYPE <- gsub(">", "", breseqDF$SVTYPE) #remove < from SVTYPE
-  #   }else{breseq <- character(0)}
-  # }else{
-  #   breseqDF <- data.table("#CHROM"=character(),"POS"=numeric(),"END"=numeric(),"SVTYPE"=character(),"CALLER"=character(),"VCF_INFO"=character(),"LEN"=numeric() )
-  # }
-  
-  
   ############################################################################################################################################################
   ############################################################################################################################################################
   ## GO OVER CHROMOSOMES
@@ -219,27 +158,14 @@ run_all <- function(args){
     if(is.na(max_sv_length)){max_sv_length <- refLength/3} #default
     
     # DELLY2
-    if( !identical(delly, character(0))  & !file.empty(delly) ){
+    if(!identical(delly, character(0))){
       TMPdellyDF <- dellyDF[dellyDF$`#CHROM`==refHeader,]
-      # insertions exception
-      TMPdellyDF_INS <- TMPdellyDF[TMPdellyDF$SVTYPE=="INS",]  #
       TMPdellyDF <- TMPdellyDF[TMPdellyDF$LEN<=max_sv_length,]  #
       TMPdellyDF <- TMPdellyDF[TMPdellyDF$LEN>=min_sv_length,]
-      TMPdellyDF <- data.table::rbindlist(list(TMPdellyDF, TMPdellyDF_INS))
-      
       dellyVEC_DUP <- rep(0,refLength)
       dellyVEC_DEL <- rep(0,refLength)
       dellyVEC_INS <- rep(0,refLength)
       dellyVEC_INV <- rep(0,refLength)
-      
-      # insBoundaryPlus
-      TMPdellyDF[, POS := ifelse(SVTYPE=="INS", POS-insBoundaryPlus, POS)]
-      TMPdellyDF[, END := ifelse(SVTYPE=="INS", END+insBoundaryPlus, END)]
-      
-      # if SV is out of range
-      TMPdellyDF[, END := ifelse(END>refLength, refLength, END)]
-      
-      
       if(nrow(TMPdellyDF)){
         for (j in 1:nrow(TMPdellyDF)){
           if(TMPdellyDF$SVTYPE[j]=="DUP"){dellyVEC_DUP[TMPdellyDF$POS[j]:TMPdellyDF$END[j]] <- 1}
@@ -256,52 +182,30 @@ run_all <- function(args){
     }
     
     # LUMPY
-    if( !identical(lumpy, character(0))  & !file.empty(lumpy) ){
+    if(!identical(lumpy, character(0))){
       TMPlumpyDF <- lumpyDF[lumpyDF$`#CHROM`==refHeader,]
-      # insertions exception
-      TMPlumpyDF_INS <- TMPlumpyDF[TMPlumpyDF$SVTYPE=="INS",]  #
       TMPlumpyDF <- TMPlumpyDF[TMPlumpyDF$LEN<=max_sv_length,]  #
       TMPlumpyDF <- TMPlumpyDF[TMPlumpyDF$LEN>=min_sv_length,]
-      TMPlumpyDF <- data.table::rbindlist(list(TMPlumpyDF, TMPlumpyDF_INS))
-      
       lumpyVEC_DUP <- rep(0,refLength)
       lumpyVEC_DEL <- rep(0,refLength)
-      lumpyVEC_INV <- rep(0,refLength)
-      lumpyVEC_INS <- rep(0,refLength)
-      
-      # insBoundaryPlus
-      TMPlumpyDF[, POS := ifelse(SVTYPE=="INS", POS-insBoundaryPlus, POS)]
-      TMPlumpyDF[, END := ifelse(SVTYPE=="INS", END+insBoundaryPlus, END)]
-      
-      # if SV is out of range
-      TMPlumpyDF[, END := ifelse(END>refLength, refLength, END)]
-      
       if(nrow(TMPlumpyDF)){
         for (j in 1:nrow(TMPlumpyDF)){
           if(TMPlumpyDF$SVTYPE[j]=="DUP"){lumpyVEC_DUP[TMPlumpyDF$POS[j]:TMPlumpyDF$END[j]] <- 1}
           if(TMPlumpyDF$SVTYPE[j]=="DEL"){lumpyVEC_DEL[TMPlumpyDF$POS[j]:TMPlumpyDF$END[j]] <- 1}
-          if(TMPlumpyDF$SVTYPE[j]=="INV"){lumpyVEC_INV[TMPlumpyDF$POS[j]:TMPlumpyDF$END[j]] <- 1}
-          if(TMPlumpyDF$SVTYPE[j]=="INS"){lumpyVEC_INS[TMPlumpyDF$POS[j]:TMPlumpyDF$END[j]] <- 1}
         }}
     }else{
       lumpyVEC_DUP <- rep(0,refLength)
       lumpyVEC_DEL <- rep(0,refLength)
-      lumpyVEC_INV <- rep(0,refLength)
-      lumpyVEC_INS <- rep(0,refLength)
       TMPlumpyDF <- lumpyDF
     }
     
     # cnvnator
-    if( !identical(cnvnator, character(0)) & !file.empty(cnvnator) ){
+    if(!identical(cnvnator, character(0))){
       TMPcnvnatorDF <- cnvnatorDF[cnvnatorDF$`#CHROM`==refHeader,]
       TMPcnvnatorDF <- TMPcnvnatorDF[TMPcnvnatorDF$LEN<=max_sv_length,]  #
       TMPcnvnatorDF <- TMPcnvnatorDF[TMPcnvnatorDF$LEN>=min_sv_length,]
       cnvnatorVEC_DUP <- rep(0,refLength)
       cnvnatorVEC_DEL <- rep(0,refLength)
-      
-      # if SV is out of range
-      TMPcnvnatorDF[, END := ifelse(END>refLength, refLength, END)]
-      
       if(nrow(TMPcnvnatorDF)){
         for (j in 1:nrow(TMPcnvnatorDF)){
           if(TMPcnvnatorDF$SVTYPE[j]=="DUP"){cnvnatorVEC_DUP[TMPcnvnatorDF$POS[j]:TMPcnvnatorDF$END[j]] <- 1}
@@ -314,27 +218,14 @@ run_all <- function(args){
     }
     
     # pindel
-    if( !identical(pindel, character(0)) & !file.empty(pindel) ){
+    if(!identical(pindel, character(0))){
       TMPpindelDF <- pindelDF[pindelDF$`#CHROM`==refHeader,]
-      # insertions exception
-      TMPpindelDF_INS <- TMPpindelDF[TMPpindelDF$SVTYPE=="INS",]  #
       TMPpindelDF <- TMPpindelDF[TMPpindelDF$LEN<=max_sv_length,]  #
       TMPpindelDF <- TMPpindelDF[TMPpindelDF$LEN>=min_sv_length,]
-      TMPpindelDF <- data.table::rbindlist(list(TMPpindelDF, TMPpindelDF_INS))
-      
-
       pindelVEC_DUP <- rep(0,refLength)
       pindelVEC_DEL <- rep(0,refLength)
       pindelVEC_INS <- rep(0,refLength)
       pindelVEC_INV <- rep(0,refLength)
-      
-      # insBoundaryPlus
-      TMPpindelDF[, POS := ifelse(SVTYPE=="INS", POS-insBoundaryPlus, POS )]
-      TMPpindelDF[, END := ifelse(SVTYPE=="INS", END+insBoundaryPlus, END)]
-      
-      # if SV is out of range
-      TMPpindelDF[, END := ifelse(END>refLength, refLength, END)]
-      
       # ingoring RPL - replacement https://www.biostars.org/p/113765/
       if(nrow(TMPpindelDF)){
         for (j in 1:nrow(TMPpindelDF)){
@@ -352,16 +243,12 @@ run_all <- function(args){
     }
     
     # cnproscan
-    if( !identical(cnproscan, character(0)) & !file.empty(cnproscan) ){
+    if(!identical(cnproscan, character(0))){
       TMPcnproscanDF <- cnproscanDF[cnproscanDF$`#CHROM`==refHeader,]
       TMPcnproscanDF <- TMPcnproscanDF[TMPcnproscanDF$LEN<=max_sv_length,]  #
       TMPcnproscanDF <- TMPcnproscanDF[TMPcnproscanDF$LEN>=min_sv_length,]
       cnproscanVEC_DUP <- rep(0,refLength)
       cnproscanVEC_DEL <- rep(0,refLength)
-      
-      # if SV is out of range
-      TMPcnproscanDF[, END := ifelse(END>refLength, refLength, END)]
-      
       # ingoring RPL - replacement https://www.biostars.org/p/113765/
       if(nrow(TMPcnproscanDF)){
         for (j in 1:nrow(TMPcnproscanDF)){
@@ -374,37 +261,13 @@ run_all <- function(args){
       TMPcnproscanDF <- cnproscanDF
     }
     
-    # insurveyor
-    if( !identical(insurveyor, character(0)) & !file.empty(insurveyor) ){
-      TMPinsurveyorDF <- insurveyorDF[insurveyorDF$`#CHROM`==refHeader,]
-      insurveyor_INS <- rep(0,refLength)
-      
-      # insBoundaryPlus
-      # TMPinsurveyorDF[, INSPOS := POS]
-      TMPinsurveyorDF[, POS := ifelse(SVTYPE=="INS", POS-insBoundaryPlus, POS)]
-      TMPinsurveyorDF[, END := ifelse(SVTYPE=="INS", END+insBoundaryPlus, END)]
-      
-      # if SV is out of range
-      TMPinsurveyorDF[, END := ifelse(END>refLength, refLength, END)]
-      
-      if(nrow(TMPinsurveyorDF)){
-        for (j in 1:nrow(TMPinsurveyorDF)){
-          if(TMPinsurveyorDF$SVTYPE[j]=="INS"){insurveyor_INS[TMPinsurveyorDF$POS[j]:TMPinsurveyorDF$END[j]] <- 1}
-        }}
-    }else{
-      insurveyor_INS <- rep(0,refLength)
-      TMPinsurveyorDF <- insurveyorDF
-    }
-    
-    
     
     ## CREATE VECTORS
     DELETIONS <- dellyVEC_DEL+lumpyVEC_DEL+cnvnatorVEC_DEL+pindelVEC_DEL+cnproscanVEC_DEL
     DUPLICATIONS <- dellyVEC_DUP+lumpyVEC_DUP+cnvnatorVEC_DUP+pindelVEC_DUP+cnproscanVEC_DUP
+    INSERTIONS <- pindelVEC_INS+dellyVEC_INS
+    INVERSIONS <- pindelVEC_INV+dellyVEC_INV
     
-    INSERTIONS <- pindelVEC_INS+dellyVEC_INS+insurveyor_INS+lumpyVEC_INS
-    INVERSIONS <- pindelVEC_INV+dellyVEC_INV+lumpyVEC_INV
-
     #######################################################################################################################
     ## DELETIONS  v2
     DELETIONS_DF <- data.frame(ID=character(),START=integer(), STOP=integer(),
@@ -412,10 +275,9 @@ run_all <- function(args){
                                maxSupSTART=integer(),maxSupSTOP=integer(),
                                Callers=character(),
                                cnproscanPortion=numeric(),delly2Portion=numeric(),lumpyPortion=numeric(),
-                               cnvnatorPortion=numeric(),pindelPortion=numeric(),insurveyorPortion=numeric(),
+                               cnvnatorPortion=numeric(),pindelPortion=numeric(),
                                cnproscanSubevents=integer(),delly2Subevents=integer(),lumpySubevents=integer(),
-                               cnvnatorSubevents=integer(),pindelSubevents=integer(),insurveyorSubevents=numeric(),
-                               overlapWith=character(),CHROM=character(),SVTYPE=character())
+                               cnvnatorSubevents=integer(),pindelSubevents=integer(),overlapWith=character(),CHROM=character(),SVTYPE=character())
     DELETIONS_DF_tmp <- DELETIONS_DF
     
     if(as.integer(max(DELETIONS))>0){
@@ -446,8 +308,6 @@ run_all <- function(args){
         DF_temp$cnvnatorSubevents <- 0
         DF_temp$pindelSubevents <- 0
         DF_temp$overlapWith <- ""
-        DF_temp$insurveyorPortion <- 0
-        DF_temp$insurveyorSubevents <- 0
         # append 
         DELETIONS_DF <- rbind(DELETIONS_DF,DF_temp)
       }
@@ -459,7 +319,7 @@ run_all <- function(args){
       DELETIONS_DF$SVTYPE <- "DEL"
       
       # threshold callersSupport
-      DELETIONS_DF <- DELETIONS_DF[DELETIONS_DF$MinSupport>=callersSupportCNV,]
+      DELETIONS_DF <- DELETIONS_DF[DELETIONS_DF$MinSupport>=callersSupport,]
       
       if(nrow(DELETIONS_DF)>0){
         #B find overlapping events
@@ -565,14 +425,14 @@ run_all <- function(args){
     DELETIONS_DF <- DELETIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
                                     "maxSupSTART", "maxSupSTOP", 
                                     "Callers","overlapWith",
-                                    "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                    "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents")]
+                                    "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                    "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )]
     
     colnames(DELETIONS_DF) <- c("ID","CHROMOSOME","START","STOP","LENGTH_MERGED","SVTYPE_MERGED","MinSupport","MaxSupport",
                                 "maxSupSTART", "maxSupSTOP",
                                 "Callers","overlapWithin",
-                                "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents" )
+                                "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )
     
     
     #######################################################################################################################
@@ -582,10 +442,9 @@ run_all <- function(args){
                                   maxSupSTART=integer(),maxSupSTOP=integer(),
                                   Callers=character(),
                                   cnproscanPortion=numeric(),delly2Portion=numeric(),lumpyPortion=numeric(),
-                                  cnvnatorPortion=numeric(),pindelPortion=numeric(),insurveyorPortion=numeric(),
+                                  cnvnatorPortion=numeric(),pindelPortion=numeric(),
                                   cnproscanSubevents=integer(),delly2Subevents=integer(),lumpySubevents=integer(),
-                                  cnvnatorSubevents=integer(),pindelSubevents=integer(),insurveyorSubevents=numeric(),
-                                  overlapWith=character(),CHROM=character(),SVTYPE=character())
+                                  cnvnatorSubevents=integer(),pindelSubevents=integer(),overlapWith=character(),CHROM=character(),SVTYPE=character())
     DUPLICATIONS_DF_tmp <- DUPLICATIONS_DF
     
     if(as.integer(max(DUPLICATIONS))>0){
@@ -616,8 +475,6 @@ run_all <- function(args){
         DF_temp$cnvnatorSubevents <- 0
         DF_temp$pindelSubevents <- 0
         DF_temp$overlapWith <- ""
-        DF_temp$insurveyorPortion <- 0
-        DF_temp$insurveyorSubevents <- 0
         # append 
         DUPLICATIONS_DF <- rbind(DUPLICATIONS_DF,DF_temp)
       }
@@ -629,7 +486,7 @@ run_all <- function(args){
       DUPLICATIONS_DF$SVTYPE <- "DUP"
       
       # threshold callersSupport
-      DUPLICATIONS_DF <- DUPLICATIONS_DF[DUPLICATIONS_DF$MinSupport>=callersSupportCNV,]
+      DUPLICATIONS_DF <- DUPLICATIONS_DF[DUPLICATIONS_DF$MinSupport>=callersSupport,]
       
       if(nrow(DUPLICATIONS_DF)>0){
         #B find overlapping events
@@ -735,29 +592,28 @@ run_all <- function(args){
     DUPLICATIONS_DF <- DUPLICATIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
                                           "maxSupSTART", "maxSupSTOP", 
                                           "Callers","overlapWith",
-                                          "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                          "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents")]
+                                          "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                          "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )]
     
     colnames(DUPLICATIONS_DF) <- c("ID","CHROMOSOME","START","STOP","LENGTH_MERGED","SVTYPE_MERGED","MinSupport","MaxSupport",
                                    "maxSupSTART", "maxSupSTOP",
                                    "Callers","overlapWithin",
-                                   "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                   "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents" )
+                                   "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                   "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )
     
     
     
     
     #######################################################################################################################
-    ## INSERTIONS - special case its a single breakpoint
+    ## INSERTIONS
     INSERTIONS_DF <- data.frame(ID=character(),START=integer(), STOP=integer(),
                                 LEN=integer(),MinSupport=integer(),MaxSupport=integer(),
                                 maxSupSTART=integer(),maxSupSTOP=integer(),
                                 Callers=character(),
                                 cnproscanPortion=numeric(),delly2Portion=numeric(),lumpyPortion=numeric(),
-                                cnvnatorPortion=numeric(),pindelPortion=numeric(),insurveyorPortion=numeric(),
+                                cnvnatorPortion=numeric(),pindelPortion=numeric(),
                                 cnproscanSubevents=integer(),delly2Subevents=integer(),lumpySubevents=integer(),
-                                cnvnatorSubevents=integer(),pindelSubevents=integer(),insurveyorSubevents=numeric(),
-                                overlapWith=character(),CHROM=character(),SVTYPE=character())
+                                cnvnatorSubevents=integer(),pindelSubevents=integer(),overlapWith=character(),CHROM=character(),SVTYPE=character())
     INSERTIONS_DF_tmp <- INSERTIONS_DF
     
     if(as.integer(max(INSERTIONS))>0){
@@ -788,8 +644,6 @@ run_all <- function(args){
         DF_temp$cnvnatorSubevents <- 0
         DF_temp$pindelSubevents <- 0
         DF_temp$overlapWith <- ""
-        DF_temp$insurveyorPortion <- 0
-        DF_temp$insurveyorSubevents <- 0
         # append 
         INSERTIONS_DF <- rbind(INSERTIONS_DF,DF_temp)
       }
@@ -801,7 +655,7 @@ run_all <- function(args){
       INSERTIONS_DF$SVTYPE <- "INS"
       
       # threshold callersSupport
-      INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupportSV,]
+      # INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupport,]
       
       if(nrow(INSERTIONS_DF)>0){
         #B find overlapping events
@@ -868,24 +722,6 @@ run_all <- function(args){
             if(INSERTIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
             
           }
-          
-          
-          if(any(which(lumpyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))){
-            INSERTIONS_DF$lumpyPortion[j] <- as.integer(length(which(lumpyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))/(INSERTIONS_DF$LEN[j]/100))
-            tmp <- which(lumpyVEC_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0)
-            INSERTIONS_DF$lumpySubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INSERTIONS_DF$lumpyPortion[j]>=95){callers <- paste(callers,"lumpy",sep = ";")} # append to callers string
-            
-          }
-          
-          if(any(which(insurveyor_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))){
-            INSERTIONS_DF$insurveyorPortion[j] <- as.integer(length(which(insurveyor_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0))/(INSERTIONS_DF$LEN[j]/100))
-            tmp <- which(insurveyor_INS[(INSERTIONS_DF$START[j]):(INSERTIONS_DF$STOP[j])]!=0)
-            INSERTIONS_DF$insurveyorSubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INSERTIONS_DF$insurveyorPortion[j]>=95){callers <- paste(callers,"insurveyor",sep = ";")} # append to callers string
-            
-          }
-          
           callers <- gsub("^;","",callers)
           INSERTIONS_DF$Callers[j] <- callers
         }
@@ -906,14 +742,14 @@ run_all <- function(args){
     INSERTIONS_DF <- INSERTIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
                                       "maxSupSTART", "maxSupSTOP", 
                                       "Callers","overlapWith",
-                                      "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                      "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents")]
+                                      "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                      "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )]
     
     colnames(INSERTIONS_DF) <- c("ID","CHROMOSOME","START","STOP","LENGTH_MERGED","SVTYPE_MERGED","MinSupport","MaxSupport",
                                  "maxSupSTART", "maxSupSTOP",
                                  "Callers","overlapWithin",
-                                 "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                 "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents" )
+                                 "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                 "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )
     
     
     
@@ -924,10 +760,9 @@ run_all <- function(args){
                                 maxSupSTART=integer(),maxSupSTOP=integer(),
                                 Callers=character(),
                                 cnproscanPortion=numeric(),delly2Portion=numeric(),lumpyPortion=numeric(),
-                                cnvnatorPortion=numeric(),pindelPortion=numeric(),insurveyorPortion=numeric(),
+                                cnvnatorPortion=numeric(),pindelPortion=numeric(),
                                 cnproscanSubevents=integer(),delly2Subevents=integer(),lumpySubevents=integer(),
-                                cnvnatorSubevents=integer(),pindelSubevents=integer(),insurveyorSubevents=numeric(),
-                                overlapWith=character(),CHROM=character(),SVTYPE=character())
+                                cnvnatorSubevents=integer(),pindelSubevents=integer(),overlapWith=character(),CHROM=character(),SVTYPE=character())
     INVERSIONS_DF_tmp <- INVERSIONS_DF
     
     if(as.integer(max(INVERSIONS))>0){
@@ -958,8 +793,6 @@ run_all <- function(args){
         DF_temp$cnvnatorSubevents <- 0
         DF_temp$pindelSubevents <- 0
         DF_temp$overlapWith <- ""
-        DF_temp$insurveyorPortion <- 0
-        DF_temp$insurveyorSubevents <- 0
         # append 
         INVERSIONS_DF <- rbind(INVERSIONS_DF,DF_temp)
       }
@@ -971,7 +804,7 @@ run_all <- function(args){
       INVERSIONS_DF$SVTYPE <- "INV"
       
       # threshold callersSupport
-      INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupportSV,]
+      # INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupport,]
       
       if(nrow(INVERSIONS_DF)>0){
         #B find overlapping events
@@ -1038,15 +871,6 @@ run_all <- function(args){
             if(INVERSIONS_DF$pindelPortion[j]>=95){callers <- paste(callers,"pindel",sep = ";")} # append to callers string
             
           }
-          
-          if(any(which(lumpyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))){
-            INVERSIONS_DF$lumpyPortion[j] <- as.integer(length(which(lumpyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0))/(INVERSIONS_DF$LEN[j]/100))
-            tmp <- which(lumpyVEC_INV[(INVERSIONS_DF$START[j]):(INVERSIONS_DF$STOP[j])]!=0)
-            INVERSIONS_DF$lumpySubevents[j] <- as.integer(length(tmp[!(tmp-1) %in% tmp]))
-            if(INVERSIONS_DF$lumpyPortion[j]>=95){callers <- paste(callers,"lumpy",sep = ";")} # append to callers string
-            
-          }
-          
           callers <- gsub("^;","",callers)
           INVERSIONS_DF$Callers[j] <- callers
         }
@@ -1067,14 +891,14 @@ run_all <- function(args){
     INVERSIONS_DF <- INVERSIONS_DF[,c("ID","CHROM","START","STOP","LEN","SVTYPE","MinSupport","MaxSupport",
                                       "maxSupSTART", "maxSupSTOP", 
                                       "Callers","overlapWith",
-                                      "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                      "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents")]
+                                      "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                      "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )]
     
     colnames(INVERSIONS_DF) <- c("ID","CHROMOSOME","START","STOP","LENGTH_MERGED","SVTYPE_MERGED","MinSupport","MaxSupport",
                                  "maxSupSTART", "maxSupSTOP",
                                  "Callers","overlapWithin",
-                                 "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion","insurveyorPortion",
-                                 "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents","insurveyorSubevents" )
+                                 "cnproscanPortion","delly2Portion","lumpyPortion","cnvnatorPortion","pindelPortion",
+                                 "cnproscanSubevents","delly2Subevents","lumpySubevents","cnvnatorSubevents","pindelSubevents" )
     
     
     
@@ -1098,14 +922,13 @@ run_all <- function(args){
   # VENN DIAGRAM of CALLERS
   SHORT_RESULTS$ID <- paste(SHORT_RESULTS$CHROMOSOME,SHORT_RESULTS$START,SHORT_RESULTS$STOP,SHORT_RESULTS$LENGTH_MERGED,SHORT_RESULTS$SVTYPE_MERGED,sep="_")
   
-  TMP_SHORT_RESULTS <- SHORT_RESULTS[SVTYPE_MERGED=="DUP" | SVTYPE_MERGED=="DEL", ]
   
   ## detect files by caller
-  delly_SVs <- TMP_SHORT_RESULTS[which(grepl( "delly2", TMP_SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
-  lumpy_SVs <- TMP_SHORT_RESULTS[which(grepl( "lumpy",  TMP_SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
-  cnvnator_SVs <- TMP_SHORT_RESULTS[which(grepl( "cnvnator",  TMP_SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
-  pindel_SVs <- TMP_SHORT_RESULTS[which(grepl( "pindel",  TMP_SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
-  cnproscan_SVs <- TMP_SHORT_RESULTS[which(grepl( "cnproscan",  TMP_SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
+  delly_SVs <- SHORT_RESULTS[which(grepl( "delly2", SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
+  lumpy_SVs <- SHORT_RESULTS[which(grepl( "lumpy",  SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
+  cnvnator_SVs <- SHORT_RESULTS[which(grepl( "cnvnator",  SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
+  pindel_SVs <- SHORT_RESULTS[which(grepl( "pindel",  SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
+  cnproscan_SVs <- SHORT_RESULTS[which(grepl( "cnproscan",  SHORT_RESULTS$Callers, fixed = TRUE)),"ID"]
   
   x <- list(
     DELLY = unique(delly_SVs$ID),
@@ -1129,7 +952,7 @@ run_all <- function(args){
     geom_sf_label(aes(label = count), color="white", label.size  = NA, size=5, alpha = 0.0, data = venn_region(data)) +
     # 5. color theme
     scale_color_brewer(palette = "Set2") +
-    labs(title = "Venn diagram of detected CNVs by callers") + theme_void()
+    labs(title = "Venn diagram of detected SVs by callers") + theme_void()
   print(p)
   dev.off()
   Sys.sleep(5)
@@ -1141,27 +964,20 @@ run_all <- function(args){
   SHORT_RESULTS$PINDEL <- 0
   SHORT_RESULTS$CNVNATOR <- 0 
   SHORT_RESULTS$CNPROSCAN <- 0 
-  SHORT_RESULTS$INSURVEYOR <- 0
-
+  
   SHORT_RESULTS[which(grepl( "delly2", SHORT_RESULTS$Callers, fixed = TRUE)),"DELLY"] <- 1
   SHORT_RESULTS[which(grepl( "lumpy",  SHORT_RESULTS$Callers, fixed = TRUE)),"LUMPY"] <- 1
   SHORT_RESULTS[which(grepl( "pindel",  SHORT_RESULTS$Callers, fixed = TRUE)),"PINDEL"] <- 1
   SHORT_RESULTS[which(grepl( "cnvnator",  SHORT_RESULTS$Callers, fixed = TRUE)),"CNVNATOR"] <- 1
   SHORT_RESULTS[which(grepl( "cnproscan",  SHORT_RESULTS$Callers, fixed = TRUE)),"CNPROSCAN"]   <- 1
-  SHORT_RESULTS[which(grepl( "cnproscan",  SHORT_RESULTS$Callers, fixed = TRUE)),"CNPROSCAN"]   <- 1
-  SHORT_RESULTS[which(grepl( "insurveyor",  SHORT_RESULTS$Callers, fixed = TRUE)),"INSURVEYOR"]   <- 1
-  
-  
-  # INSERTIONS <- pindelVEC_INS+dellyVEC_INS+insurveyor_INS+lumpyVEC_INS
-  # INVERSIONS <- pindelVEC_INV+dellyVEC_INV+lumpyVEC_INV
   
   data <- data.frame(
-    type=c(rep("DUP",5), rep("DEL",5), rep("INV",3), rep("INS",4)      ),
+    type=c(rep("DUP",5), rep("DEL",5), rep("INV",2), rep("INS",2)      ),
     caller= c("DELLY","LUMPY","PINDEL","CNVNATOR","CNPROSCAN",
               "DELLY","LUMPY","PINDEL","CNVNATOR","CNPROSCAN",
-              "DELLY","PINDEL","LUMPY",
-              "DELLY","PINDEL","LUMPY","INSURVEYOR"),
-    value=rep(0,times=17)
+              "DELLY","PINDEL",
+              "DELLY","PINDEL"),
+    value=rep(0,times=14)
   )
   
   #DUP
@@ -1179,12 +995,9 @@ run_all <- function(args){
   #INV
   data$value[11] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INV" & SHORT_RESULTS$DELLY==1 )
   data$value[12] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INV" & SHORT_RESULTS$PINDEL==1 )
-  data$value[13] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INV" & SHORT_RESULTS$LUMPY==1 )
   #INS
-  data$value[14] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INS" & SHORT_RESULTS$DELLY==1 )
-  data$value[15] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INS" & SHORT_RESULTS$PINDEL==1 )
-  data$value[16] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INS" & SHORT_RESULTS$LUMPY==1 )
-  data$value[17] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INS" & SHORT_RESULTS$INSURVEYOR==1 )
+  data$value[13] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INS" & SHORT_RESULTS$DELLY==1 )
+  data$value[14] <- sum(SHORT_RESULTS$SVTYPE_MERGED=="INS" & SHORT_RESULTS$PINDEL==1 )
   
   png(file=barchart_png,width=40,height=20,units="cm",res=300)
   p <- ggplot(data, aes(x = type, y = value, fill = caller)) +   geom_bar(stat = "identity") + 
@@ -1193,13 +1006,13 @@ run_all <- function(args){
   dev.off()
   Sys.sleep(5)
   
-  
 }
 
 
 # develop and test
-# args <- c("results/merged_procaryaSV/INS_50.procaryaSV_callers_merge.tsv","results/merged_procaryaSV/INS_50.procaryaSV_venn.png","results/merged_procaryaSV/INS_50.procaryaSV_sv_types.png","results/references/KP_ref.fasta","INS_50","1","NA","5","2000","results/lumpy/INS_50/INS_50.vcf","results/delly2/INS_50/INS_50.vcf","results/cnvnator/INS_50/INS_50.vcf","results/pindel/INS_50/INS_50.vcf","results/cnproscan/INS_50/INS_50.vcf","results/insurveyor/INS_50/INS_50.vcf")
-# setwd("/home/rj/4TB/PHD_2024/SVsim_dataset_RUN/")
+# args <- c("results/merged_procaryaSV/coverage20.procaryaSV_callers_merge.tsv","results/merged_procaryaSV/coverage20.procaryaSV_venn.png","results/merged_procaryaSV/coverage20.procaryaSV_sv_types.png","results/references/FN433596.fasta","10","NA","2","2000","results/lumpy/coverage20/coverage20.vcf","results/delly2/coverage20/coverage20.vcf","results/cnvnator/coverage20/coverage20.vcf","results/pindel/coverage20/coverage20.vcf","results/cnproscan/coverage20/coverage20.vcf")
+
+# setwd("/home/rj/4TB/PHD_TESTING/artificial_ProcaryaSV/")
 
 #run as Rscript
 args <- commandArgs(trailingOnly = T)

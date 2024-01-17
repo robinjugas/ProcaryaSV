@@ -2,16 +2,18 @@ reference_folder: /example/fastas/  # PATH to the folder with the reference fast
 genome_fasta: example.fasta # FILENAME of the reference FASTA file
 paired_reads_tags: ["_R1", "_R2"] # the suffixes used to differentiate between R1 and R2 reads.
 reads_extension: ".fastq" # the general reads file suffix, e.g fastq, .fg, fastq.gz, etc
-callers : ["lumpy","delly2","cnvnator","pindel","cnproscan"] # this list defined SV callers used, delete item if you want to skip 
+callers : ["lumpy","delly2","cnvnator","pindel","cnproscan","insurveyor"] # this list defined SV callers used, delete item if you want to skip, and adjust the procaryaSV_minCallersCNV and procaryaSV_minCallersSV
 reads_trimming: false # Enable or disable reads trimming before alignment
+QCreports: false # Enable or disable quality check report and final MultiQC report
 
 cnproscan_GC_normalization: TRUE #CNproScan optional GC normalization
 cnproscan_MAPPABILITY_normalization: TRUE #CNproScan optional mappability normalization
 cnproscan_ORIC_normalization: FALSE #CNproScan optional origin of replication normalization, this option requires to define the oriC position tied to the reference FASTA file
 cnproscan_ORIC_POSITION: 1
 
-procaryaSV_minCallers: 1 # procaryaSV Merging argument - minimal callers threshold to include the CNV/SV
-procaryaSV_min_sv_length: 1 # MprocaryaSV erging argument - minimal SV length to include the CNV/SV
+procaryaSV_minCallersCNV: 3 # procaryaSV Merging argument - minimal callers threshold to include the CNVs, recommended 2 or 3
+procaryaSV_minCallersSV: 2 # procaryaSV Merging argument - minimal callers threshold to include the SV - Inversions and Insertions, recommended 2
+procaryaSV_min_sv_length: 1 # procaryaSV Merging argument - minimal SV length to include the CNV/SV
 procaryaSV_max_sv_length: NA # procaryaSV Merging argument - maximal SV length to include the CNV/SV, certain callers call false very long events
 procaryaSV_maxGap: 2000 # procaryaSV Merging argument - maximal Gap between SVs before they are merged together. SVs further than this maxGap are not merged
 
@@ -19,7 +21,7 @@ survivor_minCallers: 1  # survivor Merging argument - minimal callers threshold 
 survivor_min_sv_length: 1 # survivorMerging argument - minimal SV length to include the CNV/SV
 survivor_max_allowed_space: 1000 # survivor Merging argument - maximal Gap between SVs before they are merged together. SVs further than this maxGap are not merged
 
-# define the prefix sample names  example = S01_R1.fastq -> S01
+# define the prefix sample names  example = S01_R1.fastq -> S01 is the prefix
 samples: 
     - S01
     - S02

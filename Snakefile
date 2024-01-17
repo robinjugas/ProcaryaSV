@@ -22,21 +22,33 @@ include: "rules/delly.smk"
 include: "rules/cnvnator.smk"
 include: "rules/cnproscan.smk"
 include: "rules/merge_callers.smk"
-include: "rules/breseq.smk"
+# include: "rules/breseq.smk"
+include: "rules/INSurVeyor.smk"
+
+
+
 ####################################
 # RULE ALL
+##### Target rules #####
+def get_ruleall_output(wildcards):
+    output_list = []
+    if config["QCreports"]:
+        output_list="results/reports/ALL_SAMPLES_MULTIQC/ALL_SAMPLES.html"
+    return output_list
+
 rule all:
     input:
         #vcf files
-        vcf_lumpy=expand("results/lumpy/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
-        vcf_delly=expand("results/delly2/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
-        vcf_cnvnator=expand("results/cnvnator/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
-        vcf_cnproscan=expand("results/cnproscan/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
-        vcf_pindel=expand("results/pindel/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
-        # vcf_breseq=expand("results/breseq/{SAMPLE}/output/output.vcf",SAMPLE = config["samples"]),
+        expand("results/lumpy/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
+        expand("results/delly2/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
+        expand("results/cnvnator/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        expand("results/cnproscan/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        expand("results/pindel/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        expand("results/insurveyor/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        # gd_breseq=expand("results/breseq/{SAMPLE}/{SAMPLE}.gd",SAMPLE = config["samples"]),
         # merged SVs
-        merge_tsv=expand("results/merged_procaryaSV/{SAMPLE}.procaryaSV_callers_merge.tsv",SAMPLE = config["samples"]),
-        vcf_surv=expand("results/merged_survivor/{SAMPLE}.survivor_merged.vcf",SAMPLE = config["samples"]),
+        expand("results/merged_procaryaSV/{SAMPLE}.procaryaSV_callers_merge.tsv",SAMPLE = config["samples"]),
+        expand("results/merged_survivor/{SAMPLE}.survivor_merged.vcf",SAMPLE = config["samples"]),
         #multiqc
-        multiqc="results/reports/ALL_SAMPLES_MULTIQC/ALL_SAMPLES.html"
+        get_ruleall_output
 

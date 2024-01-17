@@ -21,7 +21,8 @@ command = "Rscript " + os.path.abspath(os.path.dirname(__file__))+"/procaryaSV_c
     snakemake.params.sample_name + " " + \
     str(snakemake.params.min_sv_length) + " " + \
     str(snakemake.params.max_sv_length) + " " + \
-    str(snakemake.params.minCallers) + " " + \
+    str(snakemake.params.minCallersCNV) + " " + \
+    str(snakemake.params.minCallersSV) + " " + \
     str(snakemake.params.maxGap) + " " + \
     " ".join(snakemake.input.vcfs) +\
     " >> " + log_filename + " 2>&1"

@@ -1,0 +1,8 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - insurveyor
+  - picard==2.21.1
+  - samtools
