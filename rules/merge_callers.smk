@@ -13,7 +13,8 @@ rule procaryaSV_callers_merge:
         min_sv_length=config["procaryaSV_min_sv_length"],
         max_sv_length=config["procaryaSV_max_sv_length"], # NA means default value which is 1/3 of reference genome length
         minCallersCNV=config["procaryaSV_minCallersCNV"], # for CNV called by 5 tools [DEL,DUP]
-        minCallersSV=config["procaryaSV_minCallersSV"], # for SVs called by ~3 tools [INS, INV]
+        minCallersINV=config["procaryaSV_minCallersINV"], # for SVs called by ~3 tools [INV]
+        minCallersINS=config["procaryaSV_minCallersINS"], # for SVs called by ~4 tools [INS]
         maxGap=config["procaryaSV_maxGap"],
     log:
         "logs/procaryaSV_callers_merge/{SAMPLE}.log",

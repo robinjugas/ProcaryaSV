@@ -21,10 +21,9 @@ run_all <- function(args){
   min_sv_length <- as.integer(args[6]) #default 1 
   max_sv_length <- as.integer(args[7]) #default refLength/3
   callersSupportCNV <- as.integer(args[8])
-  callersSupportINV<- as.integer(args[9])
-  callersSupportINS<- as.integer(args[10])
-  distanceThreshold <- as.integer(args[11]) 
-  vcf_files <- args[12:length(args)]
+  callersSupportSV<- as.integer(args[9])
+  distanceThreshold <- as.integer(args[10]) 
+  vcf_files <- args[11:length(args)]
   
   ## Insertion Boundary Extension Parameter
   insBoundaryPlus <- 25
@@ -34,8 +33,8 @@ run_all <- function(args){
   if(is.na(distanceThreshold)){distanceThreshold <- 2000} #default
   if(is.na(min_sv_length)){min_sv_length <- 50} #default
   if(is.na(callersSupportCNV)){callersSupportCNV <- 3} #default
-  if(is.na(callersSupportINV)){callersSupportINV <- 2} #default
-  if(is.na(callersSupportINS)){callersSupportINS <- 1} #default
+  if(is.na(callersSupportSV)){callersSupportSV <- 2} #default
+  
   # max_sv_length depends on chromosome length
   
   ## read FASTA
@@ -807,7 +806,7 @@ run_all <- function(args){
       INSERTIONS_DF$SVTYPE <- "INS"
       
       # threshold callersSupport
-      INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupportINS,]
+      INSERTIONS_DF <- INSERTIONS_DF[INSERTIONS_DF$MinSupport>=callersSupportSV,]
       
       if(nrow(INSERTIONS_DF)>0){
         #B find overlapping events
@@ -977,7 +976,7 @@ run_all <- function(args){
       INVERSIONS_DF$SVTYPE <- "INV"
       
       # threshold callersSupport
-      INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupportINV,]
+      INVERSIONS_DF <- INVERSIONS_DF[INVERSIONS_DF$MinSupport>=callersSupportSV,]
       
       if(nrow(INVERSIONS_DF)>0){
         #B find overlapping events
