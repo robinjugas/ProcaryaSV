@@ -12,7 +12,9 @@ cnproscan_ORIC_normalization: FALSE #CNproScan optional origin of replication no
 cnproscan_ORIC_POSITION: 1
 
 procaryaSV_minCallersCNV: 3 # procaryaSV Merging argument - minimal callers threshold to include the CNVs, recommended 2 or 3
-procaryaSV_minCallersSV: 2 # procaryaSV Merging argument - minimal callers threshold to include the SV - Inversions and Insertions, recommended 2
+procaryaSV_minCallersINV: 2 # procaryaSV Merging argument - minimal callers threshold to include the INV - Inversions, recommended 2
+procaryaSV_minCallersINS: 1 # procaryaSV Merging argument - minimal callers threshold to include the INS - Insertions, recommended 1
+
 procaryaSV_min_sv_length: 1 # procaryaSV Merging argument - minimal SV length to include the CNV/SV
 procaryaSV_max_sv_length: NA # procaryaSV Merging argument - maximal SV length to include the CNV/SV, certain callers call false very long events
 procaryaSV_maxGap: 2000 # procaryaSV Merging argument - maximal Gap between SVs before they are merged together. SVs further than this maxGap are not merged
