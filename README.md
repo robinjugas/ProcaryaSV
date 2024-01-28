@@ -1,35 +1,45 @@
 # ProcaryaSV
 ProcaryaSV is a [Snakemake](https://snakemake.readthedocs.io/en/stable/) pipeline to call SV, mainly CNVs from bacterial genomes. 
-It employs 5 callers - [DELLY2](https://github.com/dellytools/delly), [LUMPY](https://github.com/arq5x/lumpy-sv), [Pindel](https://github.com/genome/pindel), [CNVnator](https://github.com/abyzovlab/CNVnator) and [CNproScan](https://github.com/robinjugas/CNproScan). 
+It employs 5 callers - [DELLY2](https://github.com/dellytools/delly), [LUMPY](https://github.com/arq5x/lumpy-sv),
+[Pindel](https://github.com/genome/pindel), [CNVnator](https://github.com/abyzovlab/CNVnator),[INSurVeyor](https://github.com/kensung-lab/INSurVeyor),
+and [CNproScan](https://github.com/robinjugas/CNproScan). 
+
 It provides two comparable outputs of merged SV - by ProcaryaSV's merging and by [SURVIVOR's](https://github.com/fritzsedlazeck/SURVIVOR) merge command. 
 It starts with optional read trimming, reads alignment and then proceeds to CNV/SV calling. 
 
+## Benchmarking Datasets and Results
+All the sequencing reads and scripts are in the Onedrive folder here:
+
+[https://1drv.ms/f/s!Ah7xah3UhCitj4wk3LoPqk9C1OkdxQ?e=IyvG4j](https://1drv.ms/f/s!Ah7xah3UhCitj4wk3LoPqk9C1OkdxQ?e=IyvG4j)
+
+The shared folder contains the "DATASETS_RUN" folder with both dataset, their configuration files, and bash scripts to run them. Just check the bash script and configuration file config.yaml for correct paths leading to FASTA references and ProcaryaSV pipeline folder. 
+
 ## Snakemake environment
-Snakemake workflow management can run inside [conda](https://docs.conda.io/en/latest/). Create the conda snakemake environemnt easily with conda:
+Snakemake workflow management can run inside [conda](https://docs.conda.io/en/latest/). Create the conda snakemake environemnt easily with already installed conda:
 ```
-conda create --name snakemake_environment -c bioconda -c conda-forge snakemake mamba
+conda create --name <SNAKEMAKE_ENVIRONMENT_NAME> -c bioconda -c conda-forge snakemake mamba
 ```
 or setup the environment path:
 ```
-conda create --prefix /path/snakemake_environment -c bioconda -c conda-forge snakemake mamba
+conda create --prefix /<path>/<SNAKEMAKE_ENVIRONMENT_NAME> -c bioconda -c conda-forge snakemake mamba
 ```
 
-## ProcaryaSV inputs:
+## ProcaryaSV required inputs:
 <ul>
 <li><strong>yaml configuration file</strong> -- you can find the example in config.yaml with all parameters </li>
-<li><strong>sequencing reads</strong> --  place reads in the folder structure: "EXAMPLE_DATA/results/raw_reads". The path structure /results/raw_reads is necessary. EXAMPLE_DATA is folder name defined by you.  </li>
+<li><strong>sequencing reads</strong> --  place reads in the folder structure: "<EXAMPLE_DATA>/results/raw_reads". The path structure /results/raw_reads is necessary. <EXAMPLE_DATA> is folder name defined by you.  </li>
 <li><strong>fasta reference file</strong> -- filename and filepath specified in the yaml configuration file </li> 
 </ul>
 
 ## Required folder structure
 Please, create the initial following structure and place the sequencing data within:
 ```
-EXAMPLE_DATA/results/raw_reads    (EXAMPLE_DATA is folder name defined by you)
+<EXAMPLE_DATA>/results/raw_reads    (EXAMPLE_DATA is folder name defined by you)
 ```
 
 Other folders created later by the pipeline:
 ```
-EXAMPLE_DATA/results  (EXAMPLE_DATA is folder name defined by you)
+<EXAMPLE_DATA>/results  (EXAMPLE_DATA is folder name defined by you)
     - raw_reads - created by you, put the sequencing reads here
     - callers_name - created by pipeline - folders for each SV/CNV caller's results
     - references - created by pipeline - alignment indexes
@@ -37,7 +47,7 @@ EXAMPLE_DATA/results  (EXAMPLE_DATA is folder name defined by you)
     - merged_procaryaSV - created by pipeline - procaryaSV CNV and SV called
     - merged_survivor - created by pipeline - survivor CNV and SV called
     - reports - created by pipeline - Qualimap, FastQC, Picard reports
-EXAMPLE_DATA/results/logs - created by pipeline, logs stored here
+<EXAMPLE_DATA>/results/logs - created by pipeline, logs stored here
 ```
 
 ## ProcaryaSV outputs
