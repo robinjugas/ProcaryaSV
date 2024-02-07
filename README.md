@@ -15,7 +15,7 @@ All the sequencing reads and scripts are in the Onedrive folder here:
 The shared folder contains the "DATASETS_RUN" folder with both dataset, their configuration files, and bash scripts to run them. Just check the bash script and configuration file config.yaml for correct paths leading to FASTA references and ProcaryaSV pipeline folder. 
 
 ## WIKI
-<strong>ProcaryaSV manual can be found here or under Wiki tab above:<\strong> \
+<strong>ProcaryaSV manual can be found here or under Wiki tab above:</strong> \
 [https://github.com/robinjugas/ProcaryaSV/wiki/ProcaryaSV-Manual](https://github.com/robinjugas/ProcaryaSV/wiki/ProcaryaSV-Manual)
 
 
