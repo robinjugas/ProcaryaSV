@@ -5,17 +5,20 @@ WORK_DIR=example/DATA/
 
 WORKFLOW_DIR=example/ProcaryaSV/
 
+CPU_CORES=12
+
+YAML_CONFIG=config.yaml
 
 ## activate conda ENV
 eval "$(conda shell.bash hook)"
-conda activate example_snakemake
+conda activate ProcaryaSV_conda
 
 ## RUN SNAKEMAKE
 
 #dry run
-snakemake --cores 12 -p -n --rulegraph --snakefile $WORKFLOW_DIR/Snakefile --directory $WORK_DIR --configfile config.yaml --dag | dot -Tsvg > dag.svg
+snakemake -p -n --rulegraph --snakefile $WORKFLOW_DIR/Snakefile --directory $WORK_DIR --configfile $YAML_CONFIG --dag | dot -Tsvg > dag.svg
 
 # run
-snakemake --cores 12 --snakefile $WORKFLOW_DIR/Snakefile --directory $WORK_DIR --configfile config.yaml --use-conda --conda-frontend mamba -r
+snakemake --cores $CPU_CORES --snakefile $WORKFLOW_DIR/Snakefile --directory $WORK_DIR --configfile $YAML_CONFIG --use-conda --conda-frontend mamba -r
 
 conda deactivate
