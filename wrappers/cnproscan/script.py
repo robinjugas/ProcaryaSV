@@ -30,6 +30,7 @@ command = "Rscript "+os.path.abspath(os.path.dirname(__file__))+"/runCNproScan.R
 
 f = open(log_filename, 'at')
 f.write("## COMMAND: "+command+"\n")
+f.write("## args <- c(\"" + "\",\"".join(command.split(" ")[2:-3]) + "\")\n")
 f.close()
 
 shell(command)

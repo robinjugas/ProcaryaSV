@@ -18,7 +18,7 @@ rule procaryaSV_callers_merge:
         maxGap=config["procaryaSV_maxGap"],
     log:
         "logs/procaryaSV_callers_merge/{SAMPLE}.log",
-    threads: 6
+    threads: 2
     conda:
         os.path.join(workflow.basedir,"envs/procaryaSV.yaml")
     script: os.path.join(workflow.basedir,"wrappers/procaryaSV_callers_merge/script.py")
@@ -48,7 +48,7 @@ rule survivor_merge:
         min_length=config["survivor_min_sv_length"],
     log:
         "logs/survivor_merge/{SAMPLE}.log",
-    threads: 6
+    threads: 2
     conda:
         os.path.join(workflow.basedir,"envs/survivor.yaml")
     script:

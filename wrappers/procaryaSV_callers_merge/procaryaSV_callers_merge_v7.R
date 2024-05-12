@@ -402,8 +402,7 @@ run_all <- function(args){
       TMPinsurveyorDF <- insurveyorDF
     }
     
-    ## WEIGHTING ?
-    insurveyor_INS <- 2*insurveyor_INS
+    
     
     ## CREATE VECTORS
     DELETIONS <- dellyVEC_DEL+lumpyVEC_DEL+cnvnatorVEC_DEL+pindelVEC_DEL+cnproscanVEC_DEL

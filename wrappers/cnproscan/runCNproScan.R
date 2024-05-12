@@ -30,9 +30,11 @@ run_all <- function(args){
 #run as Rscript
 args <- commandArgs(trailingOnly = T)
 # install package
-if (!require(CNproScan)) {
-  devtools::install_github("robinjugas/CNproScan", dependencies = FALSE)
+if (!require(CNproScan, character.only = F)) {
+  devtools::install_github("robinjugas/CNproScan", dependencies = TRUE)
   library(CNproScan)
+  }else{
+    library(CNproScan, character.only = F)
 }
 
 

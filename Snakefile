@@ -36,15 +36,19 @@ def get_ruleall_output(wildcards):
         output_list="results/reports/ALL_SAMPLES_MULTIQC/ALL_SAMPLES.html"
     return output_list
 
+
 rule all:
     input:
+        #bam files
+        expand("results/mapped/{SAMPLE}.bam", SAMPLE = config["samples"]),        
         #vcf files
-        expand("results/lumpy/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
-        expand("results/delly2/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
-        expand("results/cnvnator/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
-        expand("results/cnproscan/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
-        expand("results/pindel/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
-        expand("results/insurveyor/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        expand("results/{cnv_caller}/{SAMPLE}/{SAMPLE}.vcf", cnv_caller=SVcallers, SAMPLE = config["samples"]),
+        # expand("results/lumpy/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
+        # expand("results/delly2/{SAMPLE}/{SAMPLE}.vcf", SAMPLE = config["samples"]),
+        # expand("results/cnvnator/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        # expand("results/cnproscan/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        # expand("results/pindel/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
+        # expand("results/insurveyor/{SAMPLE}/{SAMPLE}.vcf",SAMPLE = config["samples"]),
         # gd_breseq=expand("results/breseq/{SAMPLE}/{SAMPLE}.gd",SAMPLE = config["samples"]),
         # merged SVs
         expand("results/merged_procaryaSV/{SAMPLE}.procaryaSV_callers_merge.tsv",SAMPLE = config["samples"]),
