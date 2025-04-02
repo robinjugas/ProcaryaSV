@@ -9,10 +9,9 @@ It starts with optional read trimming, reads alignment and then proceeds to CNV/
 
 ## Benchmarking Datasets and Results
 All the sequencing reads and scripts are in the Onedrive folder here:
+[https://1drv.ms/u/c/ad2884d41d6af11e/EV2-FKpBPulMjPt2IAF-fmEBMWfQtU0PRkwQPYUILD43Bw?e=rEZjPE](https://1drv.ms/u/c/ad2884d41d6af11e/EV2-FKpBPulMjPt2IAF-fmEBMWfQtU0PRkwQPYUILD43Bw?e=rEZjPE)
 
-[https://1drv.ms/f/s!Ah7xah3UhCitj4wk3LoPqk9C1OkdxQ?e=IyvG4j](https://1drv.ms/f/s!Ah7xah3UhCitj4wk3LoPqk9C1OkdxQ?e=IyvG4j)
-
-The shared folder contains the "DATASETS_RUN" folder with both dataset, their configuration files, and bash scripts to run them. Just check the bash script and configuration file config.yaml for correct paths leading to FASTA references and ProcaryaSV pipeline folder. 
+The shared folder contains the "DATASETS_RUN" folder with dataset, their configuration files, and bash scripts to run them. Just check the bash script and configuration file config.yaml for correct paths leading to FASTA references and ProcaryaSV pipeline folder. 
 
 ## Wiki
 <strong>ProcaryaSV manual can be found here or under Wiki tab above:</strong> \
