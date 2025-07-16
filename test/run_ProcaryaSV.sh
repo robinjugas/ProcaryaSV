@@ -4,7 +4,8 @@
 # ## WORK DIR
 WORK_DIR=`pwd`
 
-WORKFLOW_DIR=/home/rj/1TB/GIT/ProcaryaSV
+git clone https://github.com/robinjugas/ProcaryaSV.git
+WORKFLOW_DIR=ProcaryaSV
 
 
 ## activate conda ENV
