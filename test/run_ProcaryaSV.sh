@@ -4,14 +4,12 @@
 # ## WORK DIR
 WORK_DIR=`pwd`
 
-# WORK_DIR=/home/rj/4TB/PHD_2024/B_RUN_PROCARYASV/CNOGpro_dataset_RUN
-
 WORKFLOW_DIR=/home/rj/1TB/GIT/ProcaryaSV
 
 
 ## activate conda ENV
 eval "$(conda shell.bash hook)"
-conda activate snakemake
+conda activate ProcaryaSV_conda
 
 ## RUN SNAKEMAKE
 
