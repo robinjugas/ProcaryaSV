@@ -2,10 +2,11 @@
 library(data.table)
 library(stringr)
 library(seqinr)
-library(UpSetR)
+library(ggVennDiagram)
 library(ggplot2)
 library(RColorBrewer)
 library(IRanges)
+library(sf)
 
 # https://stackoverflow.com/questions/23254002/how-can-i-check-if-a-file-is-empty
 file.empty <- function(filenames){isTRUE(all.equal(file.info(filenames)$size, 0))}
@@ -1121,17 +1122,39 @@ run_all <- function(args){
     PINDEL = unique(pindel_SVs$ID),
     CNPROSCAN = unique(cnproscan_SVs$ID)
   )
+  venn <- Venn(x)
+  data <- process_data(venn)
 
-
-  # Convert to input matrix
-  inputUPSET <- fromList(x)
+  vr <- venn_region(data)
+  if (!inherits(vr, "sf")) {
+    vr <- st_as_sf(vr)
+  }
   
-  # Plot
+  ve <- venn_setedge(data)
+  if (!inherits(ve, "sf")) {
+    ve <- st_as_sf(ve)
+  }
+
+  vl <- venn_setlabel(data)
+  if (!inherits(vl, "sf")) {
+    vl <- st_as_sf(vl)
+  }
+
+
   png(file=venn_png,width=30,height=20,units="cm",res=300)
-  
-  upset(inputUPSET, sets = c("DELLY", "LUMPY", "CNVNATOR", "PINDEL", "CNPROSCAN"),
-             order.by = "freq", keep.order = TRUE)
-  
+  p <- ggplot() +
+    # 1. region count layer
+    geom_sf(aes(fill = count), data = vr) +
+    # 2. set edge layer
+    geom_sf(color=c("blue","red","yellow","green","purple"), alpha = 0.7, data = ve, show.legend = TRUE) +
+    # 3. set label layer
+    geom_sf_text(aes(label = c("DELLY","LUMPY","CNVNATOR","PINDEL","CNPROSCAN")), data = vl) +
+    # 4. region label layer
+    geom_sf_label(aes(label = count), color="white", label.size  = NA, size=5, alpha = 0.0, data = vr) +
+    # 5. color theme
+    scale_color_brewer(palette = "Set2") +
+    labs(title = "Venn diagram of detected CNVs by callers") + theme_void()
+  print(p)
   dev.off()
   Sys.sleep(5)
   
@@ -1198,9 +1221,9 @@ run_all <- function(args){
 }
 
 
-# # develop and test
-# setwd("/home/rj/1TB/PROCARYA_SV_TESTING")
-# args <- c("results/merged_procaryaSV/coverage5.procaryaSV_callers_merge.tsv","results/merged_procaryaSV/coverage5.procaryaSV_venn.png","results/merged_procaryaSV/coverage5.procaryaSV_sv_types.png","results/references/FN433596.fasta","coverage5","1","NA","5","2","2","2000","results/lumpy/coverage5/coverage5.vcf","results/delly2/coverage5/coverage5.vcf","results/cnvnator/coverage5/coverage5.vcf","results/pindel/coverage5/coverage5.vcf","results/cnproscan/coverage5/coverage5.vcf","results/insurveyor/coverage5/coverage5.vcf")
+# develop and test
+setwd("/home/rj/1TB/PROCARYA_SV_TESTING")
+args <- c("results/merged_procaryaSV/coverage5.procaryaSV_callers_merge.tsv","results/merged_procaryaSV/coverage5.procaryaSV_venn.png","results/merged_procaryaSV/coverage5.procaryaSV_sv_types.png","results/references/FN433596.fasta","coverage5","1","NA","5","2","2","2000","results/lumpy/coverage5/coverage5.vcf","results/delly2/coverage5/coverage5.vcf","results/cnvnator/coverage5/coverage5.vcf","results/pindel/coverage5/coverage5.vcf","results/cnproscan/coverage5/coverage5.vcf","results/insurveyor/coverage5/coverage5.vcf")
 
 
 #run as Rscript

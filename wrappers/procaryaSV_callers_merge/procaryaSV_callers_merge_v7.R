@@ -1120,22 +1120,27 @@ run_all <- function(args){
     PINDEL = unique(pindel_SVs$ID),
     CNPROSCAN = unique(cnproscan_SVs$ID)
   )
-  venn <- Venn(x)
-  data <- process_data(venn)
+  # venn <- Venn(x)
+  # data <- process_data(venn)
   
   png(file=venn_png,width=30,height=20,units="cm",res=300)
-  p <- ggplot() +
-    # 1. region count layer
-    geom_sf(aes(fill = count), data = venn_region(data)) +
-    # 2. set edge layer
-    geom_sf(color=c("blue","red","yellow","green","purple"), alpha = 0.7, data = venn_setedge(data), show.legend = TRUE) +
-    # 3. set label layer
-    geom_sf_text(aes(label = c("DELLY","LUMPY","CNVNATOR","PINDEL","CNPROSCAN")), data = venn_setlabel(data)) +
-    # 4. region label layer
-    geom_sf_label(aes(label = count), color="white", label.size  = NA, size=5, alpha = 0.0, data = venn_region(data)) +
-    # 5. color theme
-    scale_color_brewer(palette = "Set2") +
-    labs(title = "Venn diagram of detected CNVs by callers") + theme_void()
+  # p <- ggplot() +
+  #   # 1. region count layer
+  #   geom_sf(aes(fill = count), data = venn_region(data)) +
+  #   # 2. set edge layer
+  #   geom_sf(color=c("blue","red","yellow","green","purple"), alpha = 0.7, data = venn_setedge(data), show.legend = TRUE) +
+  #   # 3. set label layer
+  #   geom_sf_text(aes(label = c("DELLY","LUMPY","CNVNATOR","PINDEL","CNPROSCAN")), data = venn_setlabel(data)) +
+  #   # 4. region label layer
+  #   geom_sf_label(aes(label = count), color="white", label.size  = NA, size=5, alpha = 0.0, data = venn_region(data)) +
+  #   # 5. color theme
+  #   scale_color_brewer(palette = "Set2") +
+  #   labs(title = "Venn diagram of detected CNVs by callers") + theme_void()
+
+  p <- ggVennDiagram(x) +
+    scale_fill_gradient(low = "white", high = "blue") +
+    labs(title = "Venn diagram of detected CNVs by callers")
+
   print(p)
   dev.off()
   Sys.sleep(5)

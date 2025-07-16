@@ -7,8 +7,7 @@ dependencies:
   - conda-forge::r-data.table
   - conda-forge::r-stringr
   - conda-forge::r-seqinr
-  - conda-forge::r-ggvenndiagram
+  - conda-forge::r-upsetr 
   - conda-forge::r-ggplot2
   - conda-forge::r-rcolorbrewer
-  - conda-forge::r-sf
-  - bioconda::bioconductor-iranges  
+  - bioconda::bioconductor-iranges
