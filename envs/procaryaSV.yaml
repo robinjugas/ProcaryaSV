@@ -3,11 +3,12 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - conda-forge::r-base>=4.0.0
+  - conda-forge::r-base=4.3.3
   - conda-forge::r-data.table
   - conda-forge::r-stringr
   - conda-forge::r-seqinr
   - conda-forge::r-ggvenndiagram
   - conda-forge::r-ggplot2
   - conda-forge::r-rcolorbrewer
-  - bioconda::bioconductor-iranges
+  - conda-forge::r-sf
+  - bioconda::bioconductor-iranges  

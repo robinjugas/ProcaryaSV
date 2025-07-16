@@ -14,11 +14,20 @@ extra = snakemake.params.get("extra", "")
 sort_extra = snakemake.params.get("sort_extra", "")
 samblaster_extra = snakemake.params.get("samblaster_extra", "")
 
-index = snakemake.input.get("index", "")
-if isinstance(index, str):
-    index = path.splitext(snakemake.input.idx)[0]
-else:
-    index = path.splitext(snakemake.input.idx[0])[0]
+# Get "index" if it exists, otherwise fallback to "idx"
+index_input = snakemake.input.get("index") or snakemake.input.get("idx")
+
+# If it's a Namedlist (or list/tuple), extract the first value
+if not isinstance(index_input, str):
+    index_input = list(index_input)[0]  # Convert to list and take first element
+
+index = path.splitext(index_input)[0]
+
+# if isinstance(index, str):
+#     index = path.splitext(snakemake.input.idx)[0]
+# else:
+#     index = path.splitext(snakemake.input.idx[0])[0]
+
 
 log = snakemake.log_fmt_shell(stdout=False, stderr=True)
 
